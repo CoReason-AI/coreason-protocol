@@ -66,6 +66,37 @@ def test_ontology_term_invalid_origin() -> None:
         )
 
 
+def test_ontology_term_empty_string_fields() -> None:
+    """Test OntologyTerm fails with empty string fields."""
+    with pytest.raises(ValidationError) as exc:
+        OntologyTerm(
+            id="",
+            label="  ",
+            vocab_source="",
+            code="  ",
+            origin=TermOrigin.USER_INPUT,
+        )
+    # Check that validation errors are raised for all fields
+    errors = exc.value.errors()
+    failed_fields = {e["loc"][0] for e in errors}
+    assert "id" in failed_fields
+    assert "label" in failed_fields
+    assert "vocab_source" in failed_fields
+    assert "code" in failed_fields
+
+
+def test_ontology_term_whitespace_only() -> None:
+    """Test that whitespace strings are rejected."""
+    with pytest.raises(ValidationError):
+        OntologyTerm(
+            id="123",
+            label="   ",  # Invalid
+            vocab_source="MeSH",
+            code="D1",
+            origin=TermOrigin.USER_INPUT,
+        )
+
+
 def test_pico_block_valid() -> None:
     """Test PicoBlock with valid data."""
     term = OntologyTerm(
@@ -96,6 +127,33 @@ def test_pico_block_custom_operator() -> None:
         logic_operator="AND",
     )
     assert block.logic_operator == "AND"
+
+
+def test_pico_block_logic_operator_not() -> None:
+    """Test PicoBlock with 'NOT' logic operator."""
+    block = PicoBlock(
+        block_type="P",
+        description="Not patients",
+        terms=[],
+        logic_operator="NOT",
+    )
+    assert block.logic_operator == "NOT"
+
+
+def test_pico_block_invalid_values() -> None:
+    """Test PicoBlock with invalid enum-like values."""
+    with pytest.raises(ValidationError) as exc:
+        PicoBlock(
+            block_type="X",
+            description="   ",
+            terms=[],
+            logic_operator="MAYBE",
+        )
+    errors = exc.value.errors()
+    failed_fields = {e["loc"][0] for e in errors}
+    assert "block_type" in failed_fields
+    assert "description" in failed_fields
+    assert "logic_operator" in failed_fields
 
 
 def test_pico_block_invalid_terms() -> None:
