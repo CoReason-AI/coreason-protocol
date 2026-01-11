@@ -135,6 +135,14 @@ class ProtocolDefinition(BaseModel):  # type: ignore[misc]
             raise ValueError("Field cannot be empty or whitespace")
         return v
 
+    @field_validator("pico_structure")  # type: ignore[misc]
+    @classmethod
+    def check_pico_structure_consistency(cls, v: Dict[str, PicoBlock]) -> Dict[str, PicoBlock]:
+        for key, block in v.items():
+            if key != block.block_type:
+                raise ValueError(f"Key '{key}' in pico_structure must match block_type '{block.block_type}'")
+        return v
+
     def render(self, format: str = "html") -> str:
         """Exports protocol for display."""
         raise NotImplementedError("render() is not yet implemented")

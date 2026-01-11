@@ -8,7 +8,7 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_protocol
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 from pydantic import ValidationError
@@ -334,3 +334,115 @@ def test_protocol_definition_method_stubs() -> None:
 
     with pytest.raises(NotImplementedError):
         protocol.lock("user", "client")
+
+
+# COMPLEX / EDGE CASE TESTS
+
+
+def test_pico_structure_inconsistent_keys() -> None:
+    """Test that pico_structure keys must match the block_type."""
+    term = OntologyTerm(
+        id="t1",
+        label="Test",
+        vocab_source="src",
+        code="c1",
+        origin=TermOrigin.USER_INPUT,
+    )
+    # Block type is "P"
+    block = PicoBlock(block_type="P", description="Pop", terms=[term])
+
+    # Store under key "I" -> Should fail
+    with pytest.raises(ValidationError) as exc:
+        ProtocolDefinition(
+            id="p1",
+            title="Fail",
+            research_question="Q",
+            pico_structure={"I": block},
+            execution_strategies=[],
+            status=ProtocolStatus.DRAFT,
+        )
+    assert "Key 'I' in pico_structure must match block_type 'P'" in str(exc.value)
+
+
+def test_unicode_support() -> None:
+    """Test full Unicode support in string fields."""
+    unicode_str = "Résume of Pàtients with ❤️ (Emoji)"
+    term = OntologyTerm(
+        id="u1",
+        label=unicode_str,
+        vocab_source="Uni",
+        code="U+1F493",
+        origin=TermOrigin.USER_INPUT,
+    )
+    block = PicoBlock(
+        block_type="P",
+        description=unicode_str,
+        terms=[term],
+    )
+    protocol = ProtocolDefinition(
+        id="p_uni",
+        title=unicode_str,
+        research_question=unicode_str,
+        pico_structure={"P": block},
+        execution_strategies=[],
+        status=ProtocolStatus.DRAFT,
+    )
+
+    assert protocol.title == unicode_str
+    assert protocol.pico_structure["P"].description == unicode_str
+    assert protocol.pico_structure["P"].terms[0].label == unicode_str
+
+
+def test_datetime_handling() -> None:
+    """Test datetime handling (naive vs aware)."""
+    # Test Aware Datetime
+    now_utc = datetime.now(timezone.utc)
+    approval = ApprovalRecord(
+        approver_id="u1",
+        timestamp=now_utc,
+        veritas_hash="hash",
+    )
+    assert approval.timestamp == now_utc
+    assert approval.timestamp.tzinfo == timezone.utc
+
+    # Test Naive Datetime
+    now_naive = datetime.now()
+    approval_naive = ApprovalRecord(
+        approver_id="u1",
+        timestamp=now_naive,
+        veritas_hash="hash",
+    )
+    assert approval_naive.timestamp == now_naive
+
+
+def test_large_pico_block() -> None:
+    """Test performance/correctness with a large number of terms."""
+    terms = []
+    for i in range(1000):
+        terms.append(
+            OntologyTerm(
+                id=f"t{i}",
+                label=f"Term {i}",
+                vocab_source="MeSH",
+                code=f"D{i}",
+                origin=TermOrigin.SYSTEM_EXPANSION,
+            )
+        )
+
+    block = PicoBlock(
+        block_type="P",
+        description="Large Population",
+        terms=terms,
+    )
+
+    protocol = ProtocolDefinition(
+        id="large_1",
+        title="Large Protocol",
+        research_question="Q",
+        pico_structure={"P": block},
+        execution_strategies=[],
+        status=ProtocolStatus.DRAFT,
+    )
+
+    assert len(protocol.pico_structure["P"].terms) == 1000
+    assert protocol.pico_structure["P"].terms[999].code == "D999"
