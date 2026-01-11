@@ -8,12 +8,23 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_protocol
 
+from datetime import datetime
+
 import pytest
 from pydantic import ValidationError
 
-from coreason_protocol.schema import OntologyTerm, PicoBlock, TermOrigin
+from coreason_protocol.schema import (
+    ApprovalRecord,
+    ExecutableStrategy,
+    OntologyTerm,
+    PicoBlock,
+    ProtocolDefinition,
+    ProtocolStatus,
+    TermOrigin,
+)
 
 
+# Existing Tests for TermOrigin, OntologyTerm, PicoBlock
 def test_term_origin_enum() -> None:
     """Test TermOrigin enum values."""
     assert TermOrigin.USER_INPUT == "USER_INPUT"
@@ -76,7 +87,6 @@ def test_ontology_term_empty_string_fields() -> None:
             code="  ",
             origin=TermOrigin.USER_INPUT,
         )
-    # Check that validation errors are raised for all fields
     errors = exc.value.errors()
     failed_fields = {e["loc"][0] for e in errors}
     assert "id" in failed_fields
@@ -164,3 +174,163 @@ def test_pico_block_invalid_terms() -> None:
             description="Patients",
             terms=["Not a term"],
         )
+
+
+# New Tests for ProtocolStatus, ExecutableStrategy, ApprovalRecord, ProtocolDefinition
+
+
+def test_protocol_status_enum() -> None:
+    """Test ProtocolStatus enum values."""
+    assert ProtocolStatus.DRAFT == "DRAFT"
+    assert ProtocolStatus.PENDING_REVIEW == "PENDING_REVIEW"
+    assert ProtocolStatus.APPROVED == "APPROVED"
+    assert ProtocolStatus.EXECUTED == "EXECUTED"
+
+
+def test_executable_strategy_valid() -> None:
+    """Test ExecutableStrategy with valid data."""
+    strategy = ExecutableStrategy(
+        target="PUBMED",
+        query_string='("Heart Attack"[Mesh])',
+        validation_status="PRESS_PASSED",
+    )
+    assert strategy.target == "PUBMED"
+    assert strategy.query_string == '("Heart Attack"[Mesh])'
+    assert strategy.validation_status == "PRESS_PASSED"
+
+
+def test_executable_strategy_empty_fields() -> None:
+    """Test ExecutableStrategy fails with empty fields."""
+    with pytest.raises(ValidationError):
+        ExecutableStrategy(
+            target="  ",
+            query_string="",
+            validation_status="PRESS_PASSED",
+        )
+
+
+def test_approval_record_valid() -> None:
+    """Test ApprovalRecord with valid data."""
+    now = datetime.now()
+    record = ApprovalRecord(
+        approver_id="user_123",
+        timestamp=now,
+        veritas_hash="abc123hash",
+    )
+    assert record.approver_id == "user_123"
+    assert record.timestamp == now
+    assert record.veritas_hash == "abc123hash"
+
+
+def test_approval_record_empty_fields() -> None:
+    """Test ApprovalRecord fails with empty fields."""
+    with pytest.raises(ValidationError):
+        ApprovalRecord(
+            approver_id="",
+            timestamp=datetime.now(),
+            veritas_hash="   ",
+        )
+
+
+def test_protocol_definition_valid_minimal() -> None:
+    """Test ProtocolDefinition with minimal valid data (DRAFT)."""
+    term = OntologyTerm(
+        id="t1",
+        label="Aspirin",
+        vocab_source="RxNorm",
+        code="1191",
+        origin=TermOrigin.USER_INPUT,
+    )
+    pico_block = PicoBlock(
+        block_type="I",
+        description="Intervention",
+        terms=[term],
+    )
+
+    protocol = ProtocolDefinition(
+        id="proto_1",
+        title="My Protocol",
+        research_question="Does Aspirin work?",
+        pico_structure={"I": pico_block},
+        execution_strategies=[],
+        status=ProtocolStatus.DRAFT,
+    )
+
+    assert protocol.id == "proto_1"
+    assert protocol.title == "My Protocol"
+    assert protocol.research_question == "Does Aspirin work?"
+    assert protocol.pico_structure["I"] == pico_block
+    assert protocol.execution_strategies == []
+    assert protocol.status == ProtocolStatus.DRAFT
+    assert protocol.approval_history is None
+
+
+def test_protocol_definition_full() -> None:
+    """Test ProtocolDefinition with all fields populated."""
+    term = OntologyTerm(
+        id="t1",
+        label="Aspirin",
+        vocab_source="RxNorm",
+        code="1191",
+        origin=TermOrigin.USER_INPUT,
+    )
+    pico_block = PicoBlock(
+        block_type="I",
+        description="Intervention",
+        terms=[term],
+    )
+    strategy = ExecutableStrategy(
+        target="PUBMED",
+        query_string="Aspirin",
+        validation_status="PRESS_PASSED",
+    )
+    approval = ApprovalRecord(
+        approver_id="u1",
+        timestamp=datetime.now(),
+        veritas_hash="hash_123",
+    )
+
+    protocol = ProtocolDefinition(
+        id="proto_1",
+        title="Full Protocol",
+        research_question="Q?",
+        pico_structure={"I": pico_block},
+        execution_strategies=[strategy],
+        status=ProtocolStatus.APPROVED,
+        approval_history=approval,
+    )
+
+    assert len(protocol.execution_strategies) == 1
+    assert protocol.status == ProtocolStatus.APPROVED
+    assert protocol.approval_history == approval
+
+
+def test_protocol_definition_empty_fields() -> None:
+    """Test ProtocolDefinition fails with empty fields."""
+    with pytest.raises(ValidationError):
+        ProtocolDefinition(
+            id="",
+            title="  ",
+            research_question="",
+            pico_structure={},
+            execution_strategies=[],
+            status=ProtocolStatus.DRAFT,
+        )
+
+
+def test_protocol_definition_method_stubs() -> None:
+    """Test that method stubs raise NotImplementedError."""
+    protocol = ProtocolDefinition(
+        id="proto_1",
+        title="Test",
+        research_question="Q",
+        pico_structure={},
+        execution_strategies=[],
+        status=ProtocolStatus.DRAFT,
+    )
+
+    with pytest.raises(NotImplementedError):
+        protocol.render()
+
+    with pytest.raises(NotImplementedError):
+        protocol.lock("user", "client")

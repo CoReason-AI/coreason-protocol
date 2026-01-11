@@ -8,8 +8,9 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_protocol
 
+from datetime import datetime
 from enum import Enum
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, field_validator
 
@@ -69,3 +70,75 @@ class PicoBlock(BaseModel):  # type: ignore[misc]
         if not v or not v.strip():
             raise ValueError("description cannot be empty or whitespace")
         return v
+
+
+class ProtocolStatus(str, Enum):
+    """Status of the protocol in the governance lifecycle."""
+
+    DRAFT = "DRAFT"
+    PENDING_REVIEW = "PENDING_REVIEW"
+    APPROVED = "APPROVED"  # Locked & Registered
+    EXECUTED = "EXECUTED"
+
+
+class ExecutableStrategy(BaseModel):  # type: ignore[misc]
+    """A compiled search strategy for a specific target."""
+
+    target: str  # "PUBMED", "LANCEDB"
+    query_string: str  # The compiled code string
+    validation_status: str  # "PRESS_PASSED" or "WARNINGS"
+
+    @field_validator("target", "query_string", "validation_status")  # type: ignore[misc]
+    @classmethod
+    def check_non_empty(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("Field cannot be empty or whitespace")
+        return v
+
+
+class ApprovalRecord(BaseModel):  # type: ignore[misc]
+    """Record of a human sign-off."""
+
+    approver_id: str
+    timestamp: datetime
+    veritas_hash: str  # The hash returned by Coreason-Veritas
+
+    @field_validator("approver_id", "veritas_hash")  # type: ignore[misc]
+    @classmethod
+    def check_non_empty(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("Field cannot be empty or whitespace")
+        return v
+
+
+class ProtocolDefinition(BaseModel):  # type: ignore[misc]
+    """The Master Protocol Definition."""
+
+    id: str
+    title: str
+    research_question: str  # Original natural language input
+
+    # Design Layer (Mutable in DRAFT)
+    pico_structure: Dict[str, PicoBlock]
+
+    # Execution Layer (Generated on Approval)
+    execution_strategies: List[ExecutableStrategy]
+
+    # Governance Layer (Immutable Log)
+    status: ProtocolStatus
+    approval_history: Optional[ApprovalRecord] = None
+
+    @field_validator("id", "title", "research_question")  # type: ignore[misc]
+    @classmethod
+    def check_non_empty(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("Field cannot be empty or whitespace")
+        return v
+
+    def render(self, format: str = "html") -> str:
+        """Exports protocol for display."""
+        raise NotImplementedError("render() is not yet implemented")
+
+    def lock(self, user_id: str, veritas_client: Any) -> "ProtocolDefinition":
+        """Finalizes the protocol and registers with Veritas."""
+        raise NotImplementedError("lock() is not yet implemented")
