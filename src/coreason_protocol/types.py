@@ -14,6 +14,7 @@ from enum import Enum
 from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field, field_validator
+from pydantic_core import PydanticCustomError
 
 from coreason_protocol.interfaces import VeritasClientProtocol
 
@@ -116,9 +117,10 @@ class ProtocolDefinition(BaseModel):  # type: ignore[misc]
         """Ensures the dictionary keys match the block types."""
         for key, block in v.items():
             if key != block.block_type:
-                # Includes required string "Key mismatch in pico_structure"
-                raise ValueError(
-                    f"Key mismatch in pico_structure: Key '{key}' does not match block_type '{block.block_type}'"
+                raise PydanticCustomError(
+                    "key_mismatch",
+                    "Key mismatch in pico_structure: Key '{key}' does not match block_type '{block_type}'",
+                    {"key": key, "block_type": block.block_type},
                 )
         return v
 
