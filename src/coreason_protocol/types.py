@@ -8,7 +8,7 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_protocol
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Dict, List, Optional
 
@@ -132,7 +132,24 @@ class ProtocolDefinition(BaseModel):  # type: ignore[misc]
 
     def lock(self, user_id: str, veritas_client: VeritasClient) -> "ProtocolDefinition":
         """Finalizes the protocol and registers with Veritas."""
-        # Placeholder for AUC 2
+        if self.status in {ProtocolStatus.APPROVED, ProtocolStatus.EXECUTED}:
+            raise ValueError("Cannot lock a protocol that is already APPROVED or EXECUTED")
+
+        if not self.pico_structure:
+            raise ValueError("Cannot lock a protocol with an empty PICO structure")
+
+        # Create approval record
+        timestamp = datetime.now(timezone.utc)
+        payload = self.model_dump()
+        veritas_hash = veritas_client.register_protocol(payload)
+
+        self.approval_history = ApprovalRecord(
+            approver_id=user_id,
+            timestamp=timestamp,
+            veritas_hash=veritas_hash,
+        )
+        self.status = ProtocolStatus.APPROVED
+
         return self
 
     def override_term(self, term_id: str, reason: str) -> None:
