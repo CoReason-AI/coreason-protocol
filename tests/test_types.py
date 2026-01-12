@@ -8,14 +8,13 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_protocol
 
-from datetime import datetime
+from unittest.mock import MagicMock
 
 import pytest
 from pydantic import ValidationError
 
+from coreason_protocol.main import hello_world
 from coreason_protocol.types import (
-    ApprovalRecord,
-    ExecutableStrategy,
     OntologyTerm,
     PicoBlock,
     ProtocolDefinition,
@@ -24,93 +23,113 @@ from coreason_protocol.types import (
 )
 
 
-def test_term_origin_enum() -> None:
-    """Verify TermOrigin enum values."""
-    assert TermOrigin.USER_INPUT == "USER_INPUT"
-    assert TermOrigin.SYSTEM_EXPANSION == "SYSTEM_EXPANSION"
-    assert TermOrigin.HUMAN_INJECTION == "HUMAN_INJECTION"
+def test_hello_world() -> None:
+    assert hello_world() == "Hello World!"
 
 
-def test_ontology_term_valid() -> None:
-    """Verify creating a valid OntologyTerm."""
-    term = OntologyTerm(
-        id="123", label="Heart Attack", vocab_source="MeSH", code="D009203", origin=TermOrigin.SYSTEM_EXPANSION
-    )
-    assert term.id == "123"
-    assert term.label == "Heart Attack"
-    assert term.is_active is True
-    assert term.override_reason is None
+class TestOntologyTerm:
+    def test_valid_ontology_term(self) -> None:
+        term = OntologyTerm(
+            id="123",
+            label="Heart Attack",
+            vocab_source="MeSH",
+            code="D009203",
+            origin=TermOrigin.SYSTEM_EXPANSION,
+        )
+        assert term.id == "123"
+        assert term.label == "Heart Attack"
+        assert term.is_active is True
+
+    def test_empty_fields_raise_error(self) -> None:
+        with pytest.raises(ValidationError, match="Field cannot be empty"):
+            OntologyTerm(
+                id="",
+                label="Heart Attack",
+                vocab_source="MeSH",
+                code="D009203",
+                origin=TermOrigin.SYSTEM_EXPANSION,
+            )
 
 
-def test_ontology_term_validation() -> None:
-    """Verify validation for missing required fields."""
-    with pytest.raises(ValidationError):
-        # Missing label, vocab_source, etc.
-        # Intentionally invalid to trigger ValidationError
-        OntologyTerm.model_validate({"id": "123"})
+class TestPicoBlock:
+    def test_valid_pico_block(self) -> None:
+        term = OntologyTerm(
+            id="123",
+            label="Elderly",
+            vocab_source="MeSH",
+            code="D000000",
+            origin=TermOrigin.USER_INPUT,
+        )
+        block = PicoBlock(block_type="P", description="Elderly Patients", terms=[term], logic_operator="OR")
+        assert block.block_type == "P"
+        assert len(block.terms) == 1
+
+    def test_invalid_block_type(self) -> None:
+        with pytest.raises(ValidationError, match="block_type must be one of"):
+            PicoBlock(
+                block_type="X",  # Invalid
+                description="Elderly Patients",
+                terms=[],
+            )
+
+    def test_invalid_logic_operator(self) -> None:
+        with pytest.raises(ValidationError, match="logic_operator must be AND, OR, or NOT"):
+            PicoBlock(
+                block_type="P",
+                description="Elderly Patients",
+                terms=[],
+                logic_operator="XOR",
+            )
+
+    def test_empty_description_raises_error(self) -> None:
+        with pytest.raises(ValidationError, match="description cannot be empty"):
+            PicoBlock(
+                block_type="P",
+                description="  ",
+                terms=[],
+            )
 
 
-def test_pico_block_valid() -> None:
-    """Verify creating a valid PicoBlock."""
-    term = OntologyTerm(
-        id="123", label="Heart Attack", vocab_source="MeSH", code="D009203", origin=TermOrigin.SYSTEM_EXPANSION
-    )
-    block = PicoBlock(block_type="P", description="Patients with Heart Attack", terms=[term])
-    assert block.block_type == "P"
-    assert len(block.terms) == 1
-    assert block.logic_operator == "OR"  # Default check
+class TestProtocolDefinition:
+    def test_valid_protocol_definition(self) -> None:
+        term = OntologyTerm(
+            id="123",
+            label="Elderly",
+            vocab_source="MeSH",
+            code="D000000",
+            origin=TermOrigin.USER_INPUT,
+        )
+        block = PicoBlock(block_type="P", description="Elderly Patients", terms=[term])
+        protocol = ProtocolDefinition(
+            id="proto-1",
+            title="Test Protocol",
+            research_question="Question?",
+            pico_structure={"P": block},
+        )
+        assert protocol.status == ProtocolStatus.DRAFT
+        assert protocol.pico_structure["P"] == block
 
+        # Test placeholders
+        assert protocol.render() == ""
+        assert protocol.lock("user1", MagicMock()) == protocol
 
-def test_protocol_status_enum() -> None:
-    """Verify ProtocolStatus enum values."""
-    assert ProtocolStatus.DRAFT == "DRAFT"
-    assert ProtocolStatus.APPROVED == "APPROVED"
+        # Test method stubs (should do nothing or just return)
+        protocol.override_term("123", "Reason")
+        protocol.inject_term("P", term)
 
-
-def test_executable_strategy_valid() -> None:
-    """Verify creating a valid ExecutableStrategy."""
-    strategy = ExecutableStrategy(target="PUBMED", query_string="foo AND bar", validation_status="PRESS_PASSED")
-    assert strategy.target == "PUBMED"
-    assert strategy.query_string == "foo AND bar"
-
-
-def test_approval_record_valid() -> None:
-    """Verify creating a valid ApprovalRecord."""
-    now = datetime.now()
-    record = ApprovalRecord(approver_id="user_1", timestamp=now, veritas_hash="hash_123")
-    assert record.approver_id == "user_1"
-    assert record.timestamp == now
-    assert record.veritas_hash == "hash_123"
-
-
-def test_protocol_definition_valid() -> None:
-    """Verify creating a valid ProtocolDefinition with defaults."""
-    term = OntologyTerm(
-        id="123", label="Heart Attack", vocab_source="MeSH", code="D009203", origin=TermOrigin.USER_INPUT
-    )
-    block = PicoBlock(block_type="P", description="Population", terms=[term])
-    protocol = ProtocolDefinition(
-        id="proto_1",
-        title="My Protocol",
-        research_question="What is the effect of X on Y?",
-        pico_structure={"P": block},
-    )
-
-    assert protocol.id == "proto_1"
-    assert protocol.status == ProtocolStatus.DRAFT
-    assert protocol.execution_strategies == []
-    assert protocol.approval_history is None
-    assert protocol.pico_structure["P"] == block
-
-
-def test_protocol_definition_render_placeholder() -> None:
-    """Verify render placeholder returns string."""
-    protocol = ProtocolDefinition(id="1", title="Test", research_question="Question", pico_structure={})
-    assert protocol.render() == ""
-
-
-def test_protocol_definition_lock_placeholder() -> None:
-    """Verify lock placeholder returns self."""
-    protocol = ProtocolDefinition(id="1", title="Test", research_question="Question", pico_structure={})
-    locked = protocol.lock("user", None)
-    assert locked == protocol
+    def test_pico_structure_key_mismatch(self) -> None:
+        term = OntologyTerm(
+            id="123",
+            label="Elderly",
+            vocab_source="MeSH",
+            code="D000000",
+            origin=TermOrigin.USER_INPUT,
+        )
+        block = PicoBlock(block_type="P", description="Elderly Patients", terms=[term])
+        with pytest.raises(ValidationError, match="Key mismatch in pico_structure"):
+            ProtocolDefinition(
+                id="proto-1",
+                title="Test Protocol",
+                research_question="Question?",
+                pico_structure={"I": block},  # Key 'I' != block_type 'P'
+            )

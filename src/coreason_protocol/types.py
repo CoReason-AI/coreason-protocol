@@ -10,18 +10,26 @@
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from coreason_protocol.interfaces import VeritasClient
 
 
 class TermOrigin(str, Enum):
+    """Origin of a term in the protocol."""
+
     USER_INPUT = "USER_INPUT"  # The user typed this
     SYSTEM_EXPANSION = "SYSTEM_EXPANSION"  # Codex added this (Ontology child)
     HUMAN_INJECTION = "HUMAN_INJECTION"  # Reviewer added this manually
 
 
 class OntologyTerm(BaseModel):  # type: ignore[misc]
+    """A term from a controlled vocabulary."""
+
+    model_config = ConfigDict(validate_assignment=True)
+
     id: str  # UUID
     label: str  # "Myocardial Infarction"
     vocab_source: str  # "MeSH"
@@ -30,12 +38,44 @@ class OntologyTerm(BaseModel):  # type: ignore[misc]
     is_active: bool = True  # False if soft-deleted by human
     override_reason: Optional[str] = None  # e.g., "Term captures non-human studies"
 
+    @field_validator("id", "label", "vocab_source", "code")  # type: ignore[misc]
+    @classmethod
+    def check_non_empty(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("Field cannot be empty or whitespace")
+        return v
+
 
 class PicoBlock(BaseModel):  # type: ignore[misc]
+    """A block of the PICO search strategy."""
+
+    model_config = ConfigDict(validate_assignment=True)
+
     block_type: str  # "P", "I", "C", "O", "S"
     description: str  # "Elderly Patients"
     terms: List[OntologyTerm]  # The curated list of terms
     logic_operator: str = "OR"  # Logic intra-block
+
+    @field_validator("block_type")  # type: ignore[misc]
+    @classmethod
+    def check_block_type(cls, v: str) -> str:
+        if v not in {"P", "I", "C", "O", "S"}:
+            raise ValueError("block_type must be one of P, I, C, O, S")
+        return v
+
+    @field_validator("logic_operator")  # type: ignore[misc]
+    @classmethod
+    def check_logic_operator(cls, v: str) -> str:
+        if v not in {"AND", "OR", "NOT"}:
+            raise ValueError("logic_operator must be AND, OR, or NOT")
+        return v
+
+    @field_validator("description")  # type: ignore[misc]
+    @classmethod
+    def check_description(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("description cannot be empty or whitespace")
+        return v
 
 
 class ProtocolStatus(str, Enum):
@@ -58,6 +98,8 @@ class ApprovalRecord(BaseModel):  # type: ignore[misc]
 
 
 class ProtocolDefinition(BaseModel):  # type: ignore[misc]
+    model_config = ConfigDict(validate_assignment=True)
+
     id: str
     title: str
     research_question: str  # Original natural language input
@@ -88,7 +130,17 @@ class ProtocolDefinition(BaseModel):  # type: ignore[misc]
         # Placeholder for AUC 5
         return ""
 
-    def lock(self, user_id: str, veritas_client: Any) -> "ProtocolDefinition":
+    def lock(self, user_id: str, veritas_client: VeritasClient) -> "ProtocolDefinition":
         """Finalizes the protocol and registers with Veritas."""
         # Placeholder for AUC 2
         return self
+
+    def override_term(self, term_id: str, reason: str) -> None:
+        """Soft-deletes a synonym suggested by AI."""
+        # Placeholder for AUC 3
+        pass
+
+    def inject_term(self, block_type: str, term: OntologyTerm) -> None:
+        """Adds a manual keyword missed by the ontology."""
+        # Placeholder for AUC 3
+        pass
