@@ -12,7 +12,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class TermOrigin(str, Enum):
@@ -71,6 +71,17 @@ class ProtocolDefinition(BaseModel):  # type: ignore[misc]
     # Governance Layer (Immutable Log)
     status: ProtocolStatus = ProtocolStatus.DRAFT
     approval_history: Optional[ApprovalRecord] = None
+
+    @field_validator("pico_structure")  # type: ignore[misc]
+    @classmethod
+    def validate_pico_structure(cls, v: Dict[str, PicoBlock]) -> Dict[str, PicoBlock]:
+        """Ensure that keys match the block_type of the PicoBlock."""
+        for key, block in v.items():
+            if key != block.block_type:
+                raise ValueError(
+                    f"Key mismatch in pico_structure: Key '{key}' does not match block_type '{block.block_type}'"
+                )
+        return v
 
     def render(self, format: str = "html") -> str:
         """Exports protocol for display."""
