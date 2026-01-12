@@ -12,7 +12,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Dict, List, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from coreason_protocol.interfaces import VeritasClient
 
@@ -27,6 +27,8 @@ class TermOrigin(str, Enum):
 
 class OntologyTerm(BaseModel):  # type: ignore[misc]
     """A term from a controlled vocabulary."""
+
+    model_config = ConfigDict(validate_assignment=True)
 
     id: str  # UUID
     label: str  # "Myocardial Infarction"
@@ -46,6 +48,8 @@ class OntologyTerm(BaseModel):  # type: ignore[misc]
 
 class PicoBlock(BaseModel):  # type: ignore[misc]
     """A block of the PICO search strategy."""
+
+    model_config = ConfigDict(validate_assignment=True)
 
     block_type: str  # "P", "I", "C", "O", "S"
     description: str  # "Elderly Patients"
@@ -94,6 +98,8 @@ class ApprovalRecord(BaseModel):  # type: ignore[misc]
 
 
 class ProtocolDefinition(BaseModel):  # type: ignore[misc]
+    model_config = ConfigDict(validate_assignment=True)
+
     id: str
     title: str
     research_question: str  # Original natural language input
