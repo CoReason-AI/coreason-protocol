@@ -8,6 +8,7 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_protocol
 
+import html
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Dict, List, Optional
@@ -127,14 +128,21 @@ class ProtocolDefinition(BaseModel):  # type: ignore[misc]
 
     def _render_html(self) -> str:
         """Helper to render HTML representation."""
-        html_parts = [f"<h1>{self.title}</h1>", f"<p>Status: {self.status.value}</p>"]
+        # Escape title to prevent XSS in header
+        safe_title = html.escape(self.title)
+        html_parts = [f"<h1>{safe_title}</h1>", f"<p>Status: {self.status.value}</p>"]
 
         for key, block in self.pico_structure.items():
-            html_parts.append(f"<h3>{key}: {block.description}</h3>")
+            safe_desc = html.escape(block.description)
+            html_parts.append(f"<h3>{key}: {safe_desc}</h3>")
             html_parts.append("<ul>")
             for term in block.terms:
                 style = ""
-                text = term.label
+                # Escape term label
+                text = html.escape(term.label)
+                # Escape metadata
+                safe_vocab = html.escape(term.vocab_source)
+                safe_code = html.escape(term.code)
 
                 if not term.is_active:
                     style = "color: red; text-decoration: line-through;"
@@ -146,7 +154,7 @@ class ProtocolDefinition(BaseModel):  # type: ignore[misc]
                     # No specific style in spec, assuming default or distinct
                     pass
 
-                item = f"<li style='{style}'>{text} ({term.vocab_source}:{term.code})</li>"
+                item = f"<li style='{style}'>{text} ({safe_vocab}:{safe_code})</li>"
                 html_parts.append(item)
             html_parts.append("</ul>")
 
@@ -155,11 +163,7 @@ class ProtocolDefinition(BaseModel):  # type: ignore[misc]
     def lock(self, user_id: str, veritas_client: VeritasClientProtocol) -> "ProtocolDefinition":
         """Finalizes the protocol and registers with Veritas."""
         if self.status != ProtocolStatus.DRAFT and self.status != ProtocolStatus.PENDING_REVIEW:
-            # Depending on workflow, might allow re-locking or fail.
-            # Spec says "The protocol pauses for human review... Upon Human Sign-off... Locked"
-            # We assume it must be in a state ready for approval.
-            # Ideally validation logic (PRESS) happens before this.
-            pass  # pragma: no cover
+            raise ValueError(f"Cannot lock protocol in state {self.status.value}. Must be DRAFT or PENDING_REVIEW.")
 
         # In a real scenario, we would validate full state here (PRESS checks etc)
 

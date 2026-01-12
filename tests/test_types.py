@@ -164,3 +164,103 @@ def test_render_deleted_term(sample_protocol: ProtocolDefinition) -> None:
 
     # Check for red strike-through
     assert "color: red; text-decoration: line-through;" in html
+
+
+def test_render_html_escaping(sample_protocol: ProtocolDefinition) -> None:
+    """Test that special characters in terms are escaped in HTML output to prevent XSS."""
+    malicious_term = OntologyTerm(
+        id="uuid-xss",
+        label="<script>alert('XSS')</script>",
+        vocab_source="MeSH",
+        code="D00000",
+        origin=TermOrigin.USER_INPUT,
+    )
+    sample_protocol.pico_structure["P"].terms.append(malicious_term)
+
+    html = sample_protocol.render(format="html")
+
+    # Should NOT contain raw script tags
+    assert "<script>" not in html
+    # Should contain escaped version
+    assert "&lt;script&gt;" in html or "&#60;script&#62;" in html
+
+
+def test_render_empty_blocks(sample_protocol: ProtocolDefinition) -> None:
+    """Test rendering when blocks have no terms."""
+    sample_protocol.pico_structure["P"].terms = []
+
+    html = sample_protocol.render(format="html")
+
+    assert "Patient Population" in html
+    assert "<ul>" in html
+    assert "</ul>" in html
+    # Should be empty list
+    assert "<li" not in html
+
+
+def test_lock_invalid_state(sample_protocol: ProtocolDefinition) -> None:
+    """Test locking a protocol that is already approved or executed."""
+    client = MockVeritasClient()
+    user_id = "user-1"
+
+    # First lock (valid)
+    sample_protocol.lock(user_id, client)
+    assert sample_protocol.status == ProtocolStatus.APPROVED
+
+    # Second lock (invalid state)
+    # The requirement is ambiguous ("must verify strict transitions").
+    # Current implementation might be a no-op or raise error.
+    # Let's assume strictness implies raising an error or at least not re-hashing.
+    # For now, let's just verify it remains APPROVED and doesn't crash,
+    # or if we implement strict checks, we expect a ValueError.
+    # Given the previous code just did `pass`, it likely stays APPROVED.
+
+    # Let's update the expectation: it should probably raise an error in a rigorous system.
+    # I will assert that it raises ValueError after I update the code.
+    with pytest.raises(ValueError, match="Cannot lock protocol in state"):
+        sample_protocol.lock(user_id, client)
+
+
+def test_complex_full_pico_lifecycle() -> None:
+    """Test a full lifecycle with mixed term origins and soft deletes."""
+    # 1. Draft
+    terms = [
+        OntologyTerm(id="1", label="Aspirin", vocab_source="RxNorm", code="1191", origin=TermOrigin.USER_INPUT),
+        OntologyTerm(
+            id="2",
+            label="Acetylsalicylic Acid",
+            vocab_source="RxNorm",
+            code="1191",
+            origin=TermOrigin.SYSTEM_EXPANSION,
+        ),
+        OntologyTerm(id="3", label="Tylenol", vocab_source="RxNorm", code="2024", origin=TermOrigin.SYSTEM_EXPANSION),
+    ]
+
+    pico = {"I": PicoBlock(block_type="I", description="Interventions", terms=terms)}
+
+    proto = ProtocolDefinition(
+        id="complex-1", title="Complex Study", research_question="Aspirin vs Placebo", pico_structure=pico
+    )
+
+    assert proto.status == ProtocolStatus.DRAFT
+
+    # 2. Modify (Soft Delete Tylenol)
+    proto.pico_structure["I"].terms[2].soft_delete("Wrong drug")
+
+    # 3. Inject Term
+    proto.pico_structure["I"].terms.append(
+        OntologyTerm(id="4", label="Bufferin", vocab_source="Manual", code="MAN-01", origin=TermOrigin.HUMAN_INJECTION)
+    )
+
+    # 4. Render check
+    html = proto.render()
+    assert "Aspirin" in html
+    assert "color: red" in html  # Deleted Tylenol
+    assert "Bufferin" in html
+
+    # 5. Lock
+    client = MockVeritasClient()
+    proto.lock("admin", client)
+
+    assert proto.status == ProtocolStatus.APPROVED  # type: ignore[comparison-overlap]
+    assert proto.approval_history is not None
