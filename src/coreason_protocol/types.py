@@ -96,6 +96,13 @@ class ApprovalRecord(BaseModel):  # type: ignore[misc]
     timestamp: datetime
     veritas_hash: str  # The hash returned by Coreason-Veritas
 
+    @field_validator("veritas_hash")  # type: ignore[misc]
+    @classmethod
+    def check_hash_non_empty(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("veritas_hash cannot be empty or whitespace")
+        return v
+
 
 class ProtocolDefinition(BaseModel):  # type: ignore[misc]
     model_config = ConfigDict(validate_assignment=True)
