@@ -11,6 +11,8 @@
 from unittest.mock import MagicMock
 
 import pytest
+from pydantic import ValidationError
+
 from coreason_protocol.main import hello_world
 from coreason_protocol.types import (
     OntologyTerm,
@@ -19,7 +21,6 @@ from coreason_protocol.types import (
     ProtocolStatus,
     TermOrigin,
 )
-from pydantic import ValidationError
 
 
 def test_hello_world() -> None:
