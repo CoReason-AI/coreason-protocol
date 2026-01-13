@@ -112,13 +112,13 @@ class TestProtocolDefinition:
         # Test placeholders
         assert protocol.render() == ""
 
+        # Test method stubs / functionality
+        protocol.override_term("123", "Reason")
+        protocol.inject_term("P", term)
+
         mock_veritas = MagicMock()
         mock_veritas.register_protocol.return_value = "hash-123"
         assert protocol.lock("user1", mock_veritas) == protocol
-
-        # Test method stubs (should do nothing or just return)
-        protocol.override_term("123", "Reason")
-        protocol.inject_term("P", term)
 
     def test_pico_structure_key_mismatch(self) -> None:
         term = OntologyTerm(

@@ -161,8 +161,20 @@ class ProtocolDefinition(BaseModel):  # type: ignore[misc]
 
     def override_term(self, term_id: str, reason: str) -> None:
         """Soft-deletes a synonym suggested by AI."""
-        # Placeholder for AUC 3
-        pass
+        if self.status not in {ProtocolStatus.DRAFT, ProtocolStatus.PENDING_REVIEW}:
+            raise RuntimeError(f"Cannot modify protocol in {self.status.value} state")
+
+        if not reason or not reason.strip():
+            raise ValueError("Override reason cannot be empty")
+
+        for block in self.pico_structure.values():
+            for term in block.terms:
+                if term.id == term_id:
+                    term.is_active = False
+                    term.override_reason = reason
+                    return
+
+        raise ValueError(f"Term ID '{term_id}' not found in protocol")
 
     def inject_term(self, block_type: str, term: OntologyTerm) -> None:
         """Adds a manual keyword missed by the ontology."""
