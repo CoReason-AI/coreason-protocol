@@ -178,5 +178,32 @@ class ProtocolDefinition(BaseModel):  # type: ignore[misc]
 
     def inject_term(self, block_type: str, term: OntologyTerm) -> None:
         """Adds a manual keyword missed by the ontology."""
-        # Placeholder for AUC 3
-        pass
+        if self.status not in {ProtocolStatus.DRAFT, ProtocolStatus.PENDING_REVIEW}:
+            raise RuntimeError(f"Cannot modify protocol in {self.status.value} state")
+
+        # Force origin to HUMAN_INJECTION
+        term.origin = TermOrigin.HUMAN_INJECTION
+
+        # Check for global uniqueness or idempotency
+        for block in self.pico_structure.values():
+            for existing_term in block.terms:
+                if existing_term.id == term.id:
+                    if block.block_type == block_type:
+                        # Idempotent: exists in target block, do nothing
+                        return
+                    else:
+                        # Conflict: exists in another block
+                        raise ValueError(f"Term ID '{term.id}' already exists in block '{block.block_type}'")
+
+        # Get or create block
+        if block_type in self.pico_structure:
+            block = self.pico_structure[block_type]
+        else:
+            block = PicoBlock(
+                block_type=block_type,
+                description=block_type,  # Default description
+                terms=[],
+            )
+            self.pico_structure[block_type] = block
+
+        block.terms.append(term)
