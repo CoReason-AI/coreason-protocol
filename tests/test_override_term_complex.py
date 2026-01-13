@@ -10,7 +10,6 @@
 
 
 import pytest
-
 from coreason_protocol.types import (
     OntologyTerm,
     PicoBlock,
