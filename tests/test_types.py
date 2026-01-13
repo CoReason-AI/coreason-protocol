@@ -111,7 +111,10 @@ class TestProtocolDefinition:
 
         # Test placeholders
         assert protocol.render() == ""
-        assert protocol.lock("user1", MagicMock()) == protocol
+
+        mock_veritas = MagicMock()
+        mock_veritas.register_protocol.return_value = "hash-123"
+        assert protocol.lock("user1", mock_veritas) == protocol
 
         # Test method stubs (should do nothing or just return)
         protocol.override_term("123", "Reason")
