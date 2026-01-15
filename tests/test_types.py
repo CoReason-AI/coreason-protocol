@@ -110,7 +110,7 @@ class TestProtocolDefinition:
         assert protocol.pico_structure["P"] == block
 
         # Test placeholders
-        assert protocol.render() == ""
+        assert "Test Protocol" in protocol.render()
 
         # Test method stubs / functionality
         protocol.override_term("123", "Reason")
