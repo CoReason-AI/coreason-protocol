@@ -8,6 +8,7 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_protocol
 
+import html
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Dict, List, Optional
@@ -134,8 +135,49 @@ class ProtocolDefinition(BaseModel):  # type: ignore[misc]
 
     def render(self, format: str = "html") -> str:
         """Exports protocol for display."""
-        # Placeholder for AUC 5
-        return ""
+        if format != "html":
+            raise ValueError(f"Unsupported format: {format}")
+
+        output = []
+        output.append(f'<div class="protocol" id="{html.escape(self.id)}">')
+        output.append(f"<h2>{html.escape(self.title)}</h2>")
+        output.append(f"<p>{html.escape(self.research_question)}</p>")
+
+        for block in self.pico_structure.values():
+            output.append('<div class="pico-block">')
+            output.append(f"<h3>{html.escape(block.description)} ({html.escape(block.block_type)})</h3>")
+            output.append("<ul>")
+
+            for term in block.terms:
+                escaped_label = html.escape(term.label)
+                style_parts = []
+                attributes = ""
+
+                # Determine base style and tag based on origin
+                if term.origin in {TermOrigin.USER_INPUT, TermOrigin.HUMAN_INJECTION}:
+                    tag = "b"
+                    color = "blue"
+                else:  # SYSTEM_EXPANSION
+                    tag = "i"
+                    color = "grey"
+
+                # Handle deleted/inactive terms
+                if not term.is_active:
+                    color = "red"
+                    style_parts.append("text-decoration: line-through")
+                    if term.override_reason:
+                        attributes = f' title="Reason: {html.escape(term.override_reason)}"'
+
+                style_parts.insert(0, f"color: {color}")
+                style_attr = f' style="{"; ".join(style_parts)}"'
+
+                output.append(f"<li><{tag}{style_attr}{attributes}>{escaped_label}</{tag}></li>")
+
+            output.append("</ul>")
+            output.append("</div>")
+
+        output.append("</div>")
+        return "\n".join(output)
 
     def lock(self, user_id: str, veritas_client: VeritasClient) -> "ProtocolDefinition":
         """Finalizes the protocol and registers with Veritas."""
