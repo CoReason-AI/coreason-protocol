@@ -108,21 +108,22 @@ class StrategyCompiler:
         - MeSH -> "Label"[Mesh]
         - Other -> "Label"[TiAb]
         """
-        # Escape double quotes in label if present?
-        # PubMed syntax usually uses double quotes for phrases.
-        # If label has quotes, we should probably handle them.
-        # For now, assume label is clean or just needs wrapping.
-        label = term.label.strip()
-
-        # Basic escaping: if label contains double quote, escape it?
-        # PubMed doesn't support backslash escaping well.
-        # Usually one would replace " with space or single quote.
-        # But let's just wrap in quotes.
+        label = self._sanitize_label(term.label)
 
         if term.vocab_source == "MeSH":
             return f'"{label}"[Mesh]'
         else:
             return f'"{label}"[TiAb]'
+
+    def _sanitize_label(self, label: str) -> str:
+        """
+        Sanitizes the label for use in a double-quoted PubMed string.
+        - Trims whitespace.
+        - Replaces double quotes with single quotes to prevent string breaking.
+        """
+        cleaned = label.strip()
+        cleaned = cleaned.replace('"', "'")
+        return cleaned
 
     def _render_pubmed_ast(self, expr: boolean.Expression) -> str:
         """
