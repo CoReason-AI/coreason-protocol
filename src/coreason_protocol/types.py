@@ -308,3 +308,29 @@ class ProtocolDefinition(BaseModel):  # type: ignore[misc]
             )  # Updated description to match "I"
 
         self.pico_structure[block_type].terms.append(term)
+
+    def compile(self, target: str = "PUBMED") -> List[ExecutableStrategy]:
+        """
+        Compiles the protocol into executable search strategies.
+        This is a convenience wrapper around StrategyCompiler.
+
+        Args:
+            target: The target execution engine (default: "PUBMED").
+
+        Returns:
+            List[ExecutableStrategy]: The compiled strategies. Also updates self.execution_strategies.
+        """
+        from coreason_protocol.compiler import StrategyCompiler
+
+        compiler = StrategyCompiler()
+        strategy = compiler.compile(self, target=target)
+
+        # In a real scenario, we might want to merge or append.
+        # For now, just appending or replacing?
+        # PRD says "execution_strategies: List[ExecutableStrategy]".
+        # Let's append if not present, or just return.
+        # But `compile` usually implies generating a fresh set or specific one.
+        # Let's add it to the list.
+        self.execution_strategies.append(strategy)
+
+        return [strategy]
