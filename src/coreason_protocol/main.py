@@ -8,9 +8,16 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_protocol
 
+from coreason_protocol import __author__, __version__
 from coreason_protocol.utils.logger import logger
 
 
-def hello_world() -> str:
-    logger.info("Hello World!")
-    return "Hello World!"
+def main() -> None:
+    """Entry point for the package."""
+    info = f"coreason-protocol v{__version__} by {__author__}"
+    logger.info(info)
+    print(info)
+
+
+if __name__ == "__main__":  # pragma: no cover
+    main()
