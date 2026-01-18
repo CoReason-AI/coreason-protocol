@@ -7,7 +7,7 @@ import pydantic_core
 from pydantic import BaseModel, Field, field_validator
 
 if TYPE_CHECKING:
-    from coreason_protocol.interfaces import VeritasClientProtocol
+    from coreason_protocol.interfaces import VeritasClient
 
 
 class TermOrigin(str, Enum):
@@ -51,6 +51,13 @@ class ApprovalRecord(BaseModel):  # type: ignore[misc]
     timestamp: datetime
     veritas_hash: str  # The hash returned by Coreason-Veritas
 
+    @field_validator("veritas_hash")  # type: ignore[misc]
+    @classmethod
+    def validate_hash(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("veritas_hash cannot be empty")
+        return v
+
 
 class ProtocolDefinition(BaseModel):  # type: ignore[misc]
     id: str
@@ -64,7 +71,7 @@ class ProtocolDefinition(BaseModel):  # type: ignore[misc]
     execution_strategies: List[ExecutableStrategy] = Field(default_factory=list)
 
     # Governance Layer (Immutable Log)
-    status: ProtocolStatus
+    status: ProtocolStatus = ProtocolStatus.DRAFT
     approval_history: Optional[ApprovalRecord] = None
 
     @field_validator("pico_structure")  # type: ignore[misc]
@@ -146,13 +153,19 @@ class ProtocolDefinition(BaseModel):  # type: ignore[misc]
         # Fallback (should not happen given Enum)
         return label  # pragma: no cover
 
-    def lock(self, user_id: str, veritas_client: "VeritasClientProtocol") -> "ProtocolDefinition":
+    def lock(self, user_id: str, veritas_client: "VeritasClient") -> "ProtocolDefinition":
         """Finalizes the protocol and registers with Veritas."""
-        if self.status != ProtocolStatus.DRAFT:
-            raise ValueError(f"Cannot lock protocol in state: {self.status}")
+        if self.status in (ProtocolStatus.APPROVED, ProtocolStatus.EXECUTED):
+            # Matches existing test expectation
+            raise ValueError("Cannot lock a protocol that is already APPROVED or EXECUTED")
 
         if not self.pico_structure:
-            raise ValueError("Cannot lock protocol with empty PICO structure")
+            # Matches existing test expectation
+            raise ValueError("Cannot lock a protocol with an empty PICO structure")
+
+        if self.status != ProtocolStatus.DRAFT:
+            # Fallback for other states if any
+            raise ValueError(f"Cannot lock protocol in state: {self.status}")
 
         # Register with Veritas
         protocol_hash = veritas_client.register_protocol(self.model_dump(mode="json"))
@@ -167,12 +180,11 @@ class ProtocolDefinition(BaseModel):  # type: ignore[misc]
 
         return self
 
-    def override_term(self, block_type: str, term_id: str, reason: str) -> None:
+    def override_term(self, term_id: str, reason: str) -> None:
         """
         Soft-deletes a term from the protocol.
 
         Args:
-            block_type: The PICO block type (P, I, C, O, S).
             term_id: The UUID of the term.
             reason: The reason for overriding.
 
@@ -180,23 +192,30 @@ class ProtocolDefinition(BaseModel):  # type: ignore[misc]
             RuntimeError: If protocol is not in DRAFT or PENDING_REVIEW.
             ValueError: If reason is empty or term not found.
         """
+        if self.status == ProtocolStatus.APPROVED:
+            raise RuntimeError("Cannot modify protocol in APPROVED state")
+
+        if self.status == ProtocolStatus.EXECUTED:
+            raise RuntimeError("Cannot modify protocol in EXECUTED state")
+
         if self.status not in (ProtocolStatus.DRAFT, ProtocolStatus.PENDING_REVIEW):
-            raise RuntimeError(f"Cannot modify protocol in state: {self.status}")
+            raise RuntimeError(f"Cannot modify protocol in state: {self.status}")  # pragma: no cover
 
         if not reason or not reason.strip():
-            raise ValueError("Override reason must be provided")
+            raise ValueError("Override reason cannot be empty")  # Matches existing test
 
-        if block_type not in self.pico_structure:
-            raise ValueError(f"Block type '{block_type}' not found")
+        # Iterate all blocks to find the term
+        term_found = False
+        for block in self.pico_structure.values():
+            for term in block.terms:
+                if term.id == term_id:
+                    term.is_active = False
+                    term.override_reason = reason
+                    term_found = True
+                    return  # Term ID is globally unique, so we can stop
 
-        block = self.pico_structure[block_type]
-        for term in block.terms:
-            if term.id == term_id:
-                term.is_active = False
-                term.override_reason = reason
-                return
-
-        raise ValueError(f"Term '{term_id}' not found in block '{block_type}'")
+        if not term_found:
+            raise ValueError(f"Term ID '{term_id}' not found in protocol")  # Matches existing test
 
     def inject_term(self, block_type: str, term: OntologyTerm) -> None:
         """
@@ -210,15 +229,22 @@ class ProtocolDefinition(BaseModel):  # type: ignore[misc]
             RuntimeError: If protocol is not mutable.
             ValueError: If term ID is not globally unique.
         """
+        if self.status == ProtocolStatus.APPROVED:
+            raise RuntimeError("Cannot modify protocol in APPROVED state")
+
+        if self.status == ProtocolStatus.EXECUTED:
+            raise RuntimeError("Cannot modify protocol in EXECUTED state")
+
         if self.status not in (ProtocolStatus.DRAFT, ProtocolStatus.PENDING_REVIEW):
-            raise RuntimeError(f"Cannot modify protocol in state: {self.status}")
+            raise RuntimeError(f"Cannot modify protocol in state: {self.status}")  # pragma: no cover
 
         # Enforce uniqueness globally
         for blk in self.pico_structure.values():
             for t in blk.terms:
                 if t.id == term.id:
-                    if t.origin == TermOrigin.HUMAN_INJECTION and block_type == blk.block_type:
+                    if block_type == blk.block_type:
                         # Idempotency: if exact same injection exists in same block, ignore
+                        # This applies even if origin differs (e.g. attempting to inject an existing System Expansion)
                         return
                     raise ValueError(f"Term ID '{term.id}' already exists in block '{blk.block_type}'")
 

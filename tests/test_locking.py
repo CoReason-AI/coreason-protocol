@@ -2,7 +2,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from coreason_protocol.interfaces import VeritasClientProtocol
+from coreason_protocol.interfaces import VeritasClient
 from coreason_protocol.types import (
     OntologyTerm,
     PicoBlock,
@@ -21,7 +21,7 @@ def test_lock_success() -> None:
     )
 
     # Mock Veritas
-    mock_veritas = Mock(spec=VeritasClientProtocol)
+    mock_veritas = Mock(spec=VeritasClient)
     mock_veritas.register_protocol.return_value = "hash_123"
 
     # Action
@@ -38,20 +38,15 @@ def test_lock_success() -> None:
     mock_veritas.register_protocol.assert_called_once()
     call_arg = mock_veritas.register_protocol.call_args[0][0]
     assert call_arg["id"] == "proto-1"
-    assert (
-        call_arg["status"] == "DRAFT"
-    )  # It sends the state BEFORE update? Or likely `model_dump` is called before update?
-    # Wait, in the code:
-    # protocol_hash = veritas_client.register_protocol(self.model_dump(mode='json'))
-    # self.status = APPROVED (After)
-    # So the dump contains "DRAFT". This is correct as we are registering the draft that is being approved.
+    assert call_arg["status"] == "DRAFT"
 
 
 def test_lock_fail_wrong_status() -> None:
     pd = ProtocolDefinition(id="1", title="T", research_question="Q", pico_structure={}, status=ProtocolStatus.APPROVED)
     mock_veritas = Mock()
 
-    with pytest.raises(ValueError, match="Cannot lock protocol in state: .*APPROVED"):
+    # Updated expectation to match new implementation which matches existing tests
+    with pytest.raises(ValueError, match="Cannot lock a protocol that is already APPROVED or EXECUTED"):
         pd.lock("user", mock_veritas)
 
     mock_veritas.register_protocol.assert_not_called()
@@ -67,7 +62,21 @@ def test_lock_fail_empty_pico() -> None:
     )
     mock_veritas = Mock()
 
-    with pytest.raises(ValueError, match="Cannot lock protocol with empty PICO structure"):
+    # Updated expectation
+    with pytest.raises(ValueError, match="Cannot lock a protocol with an empty PICO structure"):
         pd.lock("user", mock_veritas)
 
     mock_veritas.register_protocol.assert_not_called()
+
+
+def test_lock_pending_review() -> None:
+    """Test locking a protocol in PENDING_REVIEW raises ValueError."""
+    term = OntologyTerm(id="1", label="T", vocab_source="S", code="C", origin=TermOrigin.USER_INPUT)
+    block = PicoBlock(block_type="P", description="Pop", terms=[term])
+    pd = ProtocolDefinition(
+        id="1", title="T", research_question="Q", pico_structure={"P": block}, status=ProtocolStatus.PENDING_REVIEW
+    )
+    mock_veritas = Mock()
+
+    with pytest.raises(ValueError, match="Cannot lock protocol in state: .*PENDING_REVIEW"):
+        pd.lock("user", mock_veritas)

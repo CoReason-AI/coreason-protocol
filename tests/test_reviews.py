@@ -10,7 +10,8 @@ def test_override_term_success() -> None:
         id="1", title="T", research_question="Q", pico_structure={"P": block}, status=ProtocolStatus.DRAFT
     )
 
-    pd.override_term("P", "1", "Bad term")
+    # Updated call signature
+    pd.override_term("1", "Bad term")
 
     assert pd.pico_structure["P"].terms[0].is_active is False
     assert pd.pico_structure["P"].terms[0].override_reason == "Bad term"
@@ -18,14 +19,14 @@ def test_override_term_success() -> None:
 
 def test_override_term_fail_status() -> None:
     pd = ProtocolDefinition(id="1", title="T", research_question="Q", pico_structure={}, status=ProtocolStatus.APPROVED)
-    with pytest.raises(RuntimeError, match="Cannot modify protocol in state: .*APPROVED"):
-        pd.override_term("P", "1", "R")
+    with pytest.raises(RuntimeError, match="Cannot modify protocol in APPROVED state"):
+        pd.override_term("1", "R")
 
 
 def test_override_term_fail_empty_reason() -> None:
     pd = ProtocolDefinition(id="1", title="T", research_question="Q", pico_structure={}, status=ProtocolStatus.DRAFT)
-    with pytest.raises(ValueError, match="Override reason must be provided"):
-        pd.override_term("P", "1", "   ")  # Whitespace
+    with pytest.raises(ValueError, match="Override reason cannot be empty"):
+        pd.override_term("1", "   ")  # Whitespace
 
 
 def test_override_term_fail_missing_block_or_term() -> None:
@@ -35,11 +36,8 @@ def test_override_term_fail_missing_block_or_term() -> None:
         id="1", title="T", research_question="Q", pico_structure={"P": block}, status=ProtocolStatus.DRAFT
     )
 
-    with pytest.raises(ValueError, match="Block type 'I' not found"):
-        pd.override_term("I", "1", "R")
-
-    with pytest.raises(ValueError, match="Term '999' not found in block 'P'"):
-        pd.override_term("P", "999", "R")
+    with pytest.raises(ValueError, match="Term ID '999' not found in protocol"):
+        pd.override_term("999", "R")
 
 
 def test_inject_term_success() -> None:
@@ -91,5 +89,13 @@ def test_inject_term_fail_status() -> None:
     pd = ProtocolDefinition(id="1", title="T", research_question="Q", pico_structure={}, status=ProtocolStatus.APPROVED)
     t = OntologyTerm(id="1", label="T", vocab_source="S", code="C", origin=TermOrigin.HUMAN_INJECTION)
 
-    with pytest.raises(RuntimeError, match="Cannot modify protocol in state: .*APPROVED"):
+    with pytest.raises(RuntimeError, match="Cannot modify protocol in APPROVED state"):
+        pd.inject_term("P", t)
+
+
+def test_inject_term_fail_executed() -> None:
+    pd = ProtocolDefinition(id="1", title="T", research_question="Q", pico_structure={}, status=ProtocolStatus.EXECUTED)
+    t = OntologyTerm(id="1", label="T", vocab_source="S", code="C", origin=TermOrigin.HUMAN_INJECTION)
+
+    with pytest.raises(RuntimeError, match="Cannot modify protocol in EXECUTED state"):
         pd.inject_term("P", t)

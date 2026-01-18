@@ -1,7 +1,7 @@
 from typing import Any, Dict, Protocol
 
 
-class VeritasClientProtocol(Protocol):
+class VeritasClient(Protocol):
     """Interface for the Coreason Veritas audit system."""
 
     def register_protocol(self, protocol_data: Dict[str, Any]) -> str:
