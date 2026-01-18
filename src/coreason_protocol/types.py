@@ -308,3 +308,32 @@ class ProtocolDefinition(BaseModel):  # type: ignore[misc]
             )  # Updated description to match "I"
 
         self.pico_structure[block_type].terms.append(term)
+
+    def compile(self, target: str = "PUBMED") -> List[ExecutableStrategy]:
+        """
+        Compiles the protocol into executable search strategies.
+        This is a convenience wrapper around StrategyCompiler.
+
+        Args:
+            target: The target execution engine (default: "PUBMED").
+
+        Returns:
+            List[ExecutableStrategy]: The compiled strategies. Also updates self.execution_strategies.
+        """
+        from coreason_protocol.compiler import StrategyCompiler
+
+        compiler = StrategyCompiler()
+        strategy = compiler.compile(self, target=target)
+
+        # Idempotency: Update existing strategy for the target if present
+        updated = False
+        for i, existing in enumerate(self.execution_strategies):
+            if existing.target == target:
+                self.execution_strategies[i] = strategy
+                updated = True
+                break
+
+        if not updated:
+            self.execution_strategies.append(strategy)
+
+        return [strategy]
