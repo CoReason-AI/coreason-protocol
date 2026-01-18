@@ -1,3 +1,6 @@
+from enum import Enum
+from typing import Callable, Dict
+
 import boolean
 
 from coreason_protocol.types import (
@@ -5,6 +8,15 @@ from coreason_protocol.types import (
     OntologyTerm,
     ProtocolDefinition,
 )
+from coreason_protocol.utils.logger import logger
+
+
+class Target(str, Enum):
+    PUBMED = "PUBMED"
+
+
+class VocabSource(str, Enum):
+    MESH = "MeSH"
 
 
 class StrategyCompiler:
@@ -15,8 +27,10 @@ class StrategyCompiler:
 
     def __init__(self) -> None:
         self.algebra = boolean.BooleanAlgebra()
+        # Dispatch map for extensibility (Open/Closed Principle)
+        self._compilers: Dict[str, Callable[[ProtocolDefinition], str]] = {Target.PUBMED.value: self._compile_pubmed}
 
-    def compile(self, protocol: ProtocolDefinition, target: str = "PUBMED") -> ExecutableStrategy:
+    def compile(self, protocol: ProtocolDefinition, target: str = Target.PUBMED.value) -> ExecutableStrategy:
         """
         Compiles the protocol for a specific target.
 
@@ -30,15 +44,22 @@ class StrategyCompiler:
         Raises:
             ValueError: If the target is not supported.
         """
-        if target == "PUBMED":
-            query_string = self._compile_pubmed(protocol)
-            return ExecutableStrategy(
-                target="PUBMED",
-                query_string=query_string,
-                validation_status="PRESS_PASSED",  # Placeholder until validation logic exists
-            )
-        else:
+        logger.debug(f"Compiling protocol {protocol.id} for target {target}")
+
+        compiler_func = self._compilers.get(target)
+        if not compiler_func:
+            logger.error(f"Unsupported target requested: {target}")
             raise ValueError(f"Unsupported target: {target}")
+
+        query_string = compiler_func(protocol)
+
+        logger.info(f"Successfully compiled protocol {protocol.id} for {target}")
+
+        return ExecutableStrategy(
+            target=target,
+            query_string=query_string,
+            validation_status="PRESS_PASSED",  # Placeholder until validation logic exists
+        )
 
     def _compile_pubmed(self, protocol: ProtocolDefinition) -> str:
         """
@@ -110,7 +131,7 @@ class StrategyCompiler:
         """
         label = self._sanitize_label(term.label)
 
-        if term.vocab_source == "MeSH":
+        if term.vocab_source == VocabSource.MESH.value:
             return f'"{label}"[Mesh]'
         else:
             return f'"{label}"[TiAb]'

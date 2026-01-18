@@ -325,12 +325,15 @@ class ProtocolDefinition(BaseModel):  # type: ignore[misc]
         compiler = StrategyCompiler()
         strategy = compiler.compile(self, target=target)
 
-        # In a real scenario, we might want to merge or append.
-        # For now, just appending or replacing?
-        # PRD says "execution_strategies: List[ExecutableStrategy]".
-        # Let's append if not present, or just return.
-        # But `compile` usually implies generating a fresh set or specific one.
-        # Let's add it to the list.
-        self.execution_strategies.append(strategy)
+        # Idempotency: Update existing strategy for the target if present
+        updated = False
+        for i, existing in enumerate(self.execution_strategies):
+            if existing.target == target:
+                self.execution_strategies[i] = strategy
+                updated = True
+                break
+
+        if not updated:
+            self.execution_strategies.append(strategy)
 
         return [strategy]
