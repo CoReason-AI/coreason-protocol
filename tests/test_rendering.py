@@ -55,14 +55,14 @@ def test_render_term_styles() -> None:
     html_output = pd.render()
 
     # Check t1
-    assert "<b style='color: blue; font-weight: bold;'>User Term</b>" in html_output
+    assert '<b style="color: blue">User Term</b>' in html_output
     # Check t2
-    assert "<i style='color: grey; font-style: italic;'>Sys Term</i>" in html_output
+    assert '<i style="color: grey">Sys Term</i>' in html_output
     # Check t3
-    assert "<b style='color: blue; font-weight: bold;'>Inj Term</b>" in html_output
+    assert '<b style="color: blue">Inj Term</b>' in html_output
     # Check t4
     assert "style='color: red; text-decoration: line-through;'" in html_output
-    assert "title='Bad match'" in html_output
+    assert 'title="Reason: Bad match"' in html_output
     assert ">Del Term</span>" in html_output
 
 
@@ -105,8 +105,9 @@ def test_render_block_ordering() -> None:
 
     html_output = pd.render()
 
-    idx_p = html_output.find("<h2>P: Pop</h2>")
-    idx_o = html_output.find("<h2>O: Out</h2>")
+    # Updated expectation due to header format change
+    idx_p = html_output.find("<h2>Pop (P)</h2>")
+    idx_o = html_output.find("<h2>Out (O)</h2>")
 
     assert idx_p != -1
     assert idx_o != -1

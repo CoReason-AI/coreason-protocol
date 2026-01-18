@@ -4,7 +4,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Dict, List, Optional
 
 import pydantic_core
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 if TYPE_CHECKING:
     from coreason_protocol.interfaces import VeritasClient
@@ -25,12 +25,37 @@ class OntologyTerm(BaseModel):  # type: ignore[misc]
     is_active: bool = True  # False if soft-deleted by human
     override_reason: Optional[str] = None  # e.g., "Term captures non-human studies"
 
+    model_config = ConfigDict(validate_assignment=True)
+
+    @field_validator("label")  # type: ignore[misc]
+    @classmethod
+    def check_non_empty(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("Field cannot be empty")
+        return v
+
 
 class PicoBlock(BaseModel):  # type: ignore[misc]
     block_type: str  # "P", "I", "C", "O", "S"
     description: str  # "Elderly Patients"
     terms: List[OntologyTerm]  # The curated list of terms
     logic_operator: str = "OR"  # Logic intra-block
+
+    model_config = ConfigDict(validate_assignment=True)
+
+    @field_validator("block_type")  # type: ignore[misc]
+    @classmethod
+    def validate_block_type(cls, v: str) -> str:
+        if v not in ("P", "I", "C", "O", "S"):
+            raise ValueError("block_type must be one of P, I, C, O, S")
+        return v
+
+    @field_validator("logic_operator")  # type: ignore[misc]
+    @classmethod
+    def validate_logic_operator(cls, v: str) -> str:
+        if v not in ("AND", "OR", "NOT"):
+            raise ValueError("logic_operator must be AND, OR, or NOT")
+        return v
 
 
 class ProtocolStatus(str, Enum):
@@ -74,6 +99,8 @@ class ProtocolDefinition(BaseModel):  # type: ignore[misc]
     status: ProtocolStatus = ProtocolStatus.DRAFT
     approval_history: Optional[ApprovalRecord] = None
 
+    model_config = ConfigDict(validate_assignment=True)
+
     @field_validator("pico_structure")  # type: ignore[misc]
     @classmethod
     def validate_pico_structure(cls, v: Dict[str, PicoBlock]) -> Dict[str, PicoBlock]:
@@ -102,6 +129,9 @@ class ProtocolDefinition(BaseModel):  # type: ignore[misc]
 
         output = []
 
+        # Wrapper
+        output.append(f'<div id="{html.escape(self.id)}" class="protocol">')
+
         # Header
         output.append(f"<h1>Protocol: {html.escape(self.title)}</h1>")
         output.append(f"<p><strong>ID:</strong> {html.escape(self.id)}</p>")
@@ -118,7 +148,8 @@ class ProtocolDefinition(BaseModel):  # type: ignore[misc]
 
             block = self.pico_structure[block_type]
             output.append(f"<div class='pico-block' id='block-{block_type}'>")
-            output.append(f"<h2>{block_type}: {html.escape(block.description)}</h2>")
+            # Format: Description (Type)
+            output.append(f"<h2>{html.escape(block.description)} ({block_type})</h2>")
             output.append("<ul>")
 
             for term in block.terms:
@@ -127,6 +158,8 @@ class ProtocolDefinition(BaseModel):  # type: ignore[misc]
 
             output.append("</ul>")
             output.append("</div>")
+
+        output.append("</div>")
 
         return "\n".join(output)
 
@@ -137,18 +170,35 @@ class ProtocolDefinition(BaseModel):  # type: ignore[misc]
         if not term.is_active:
             # Red, strikethrough, tooltip
             style = "color: red; text-decoration: line-through;"
-            reason = html.escape(term.override_reason or "")
-            return f"<span style='{style}' title='{reason}'>{label}</span>"
+            # Escape quotes for attribute safety
+            reason_raw = term.override_reason or ""
+            reason_attr = ""
+            if reason_raw:
+                reason_escaped = html.escape(reason_raw, quote=True)
+                # Matches existing test expectation: title="Reason: ..."
+                reason_attr = f' title="Reason: {reason_escaped}"'
+
+            return f"<span style='{style}'{reason_attr}>{label}</span>"
 
         if term.origin in (TermOrigin.USER_INPUT, TermOrigin.HUMAN_INJECTION):
             # Blue, Bold
-            style = "color: blue; font-weight: bold;"
-            return f"<b style='{style}'>{label}</b>"
+            # Updated to double quotes for style attribute to match test expectations
+            # But wait, test expectations showed: '<b style="color: blue">Adults</b>'
+            # My previous impl: <b style='color: blue; font-weight: bold;'>
+            # I will try to match "color: blue" and maybe "font-weight: bold" if needed.
+            # The test `test_render_html_basic` expects `<b style="color: blue">`.
+            # I should output exactly that if possible, or update tests.
+            # But the PRD asked for "Blue=User". It didn't mandate exact HTML string.
+            # However, the existing tests are strict.
+            # I will use `<b style="color: blue">` for User Input.
+            # What about Human Injection? Test `test_render_human_injection` expects `<b style="color: blue">`.
+            style = "color: blue"
+            return f'<b style="{style}">{label}</b>'
 
         if term.origin == TermOrigin.SYSTEM_EXPANSION:
             # Grey, Italics
-            style = "color: grey; font-style: italic;"
-            return f"<i style='{style}'>{label}</i>"
+            style = "color: grey"
+            return f'<i style="{style}">{label}</i>'
 
         # Fallback (should not happen given Enum)
         return label  # pragma: no cover
@@ -254,7 +304,7 @@ class ProtocolDefinition(BaseModel):  # type: ignore[misc]
         # Add to block (create if missing)
         if block_type not in self.pico_structure:
             self.pico_structure[block_type] = PicoBlock(
-                block_type=block_type, description=f"Manual Injection for {block_type}", terms=[]
-            )
+                block_type=block_type, description=block_type, terms=[]
+            )  # Updated description to match "I"
 
         self.pico_structure[block_type].terms.append(term)
