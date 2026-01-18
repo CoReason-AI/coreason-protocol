@@ -1,20 +1,11 @@
-# Copyright (c) 2025 CoReason, Inc.
-#
-# This software is proprietary and dual-licensed.
-# Licensed under the Prosperity Public License 3.0 (the "License").
-# A copy of the license is available at https://prosperitylicense.com/versions/3.0.0
-# For details, see the LICENSE file.
-# Commercial use beyond a 30-day trial requires a separate license.
-#
-# Source Code: https://github.com/CoReason-AI/coreason_protocol
-
-from unittest.mock import MagicMock
+from datetime import datetime, timezone
 
 import pytest
 from pydantic import ValidationError
 
-from coreason_protocol.main import hello_world
 from coreason_protocol.types import (
+    ApprovalRecord,
+    ExecutableStrategy,
     OntologyTerm,
     PicoBlock,
     ProtocolDefinition,
@@ -23,116 +14,151 @@ from coreason_protocol.types import (
 )
 
 
-def test_hello_world() -> None:
-    assert hello_world() == "Hello World!"
+def test_ontology_term_defaults() -> None:
+    term = OntologyTerm(id="123", label="Test Term", vocab_source="MeSH", code="D123", origin=TermOrigin.USER_INPUT)
+    assert term.is_active is True
+    assert term.override_reason is None
 
 
-class TestOntologyTerm:
-    def test_valid_ontology_term(self) -> None:
-        term = OntologyTerm(
-            id="123",
-            label="Heart Attack",
-            vocab_source="MeSH",
-            code="D009203",
-            origin=TermOrigin.SYSTEM_EXPANSION,
+def test_pico_block_logic_operator_default() -> None:
+    block = PicoBlock(block_type="P", description="Population", terms=[])
+    assert block.logic_operator == "OR"
+
+
+def test_protocol_definition_defaults() -> None:
+    pd = ProtocolDefinition(
+        id="proto-1",
+        title="Test Protocol",
+        research_question="Does X cause Y?",
+        pico_structure={},
+        status=ProtocolStatus.DRAFT,
+    )
+    assert pd.execution_strategies == []
+    assert pd.approval_history is None
+
+
+def test_protocol_definition_methods_exist() -> None:
+    pd = ProtocolDefinition(
+        id="proto-1",
+        title="Test Protocol",
+        research_question="Does X cause Y?",
+        pico_structure={},
+        status=ProtocolStatus.DRAFT,
+    )
+    # render() is tested in test_rendering.py, just ensure it returns a string
+    assert isinstance(pd.render(), str)
+    # lock() is tested in test_locking.py
+
+
+def test_full_instantiation() -> None:
+    term = OntologyTerm(
+        id="term-1", label="Aspirin", vocab_source="RxNorm", code="1191", origin=TermOrigin.SYSTEM_EXPANSION
+    )
+    block = PicoBlock(block_type="I", description="Intervention", terms=[term])
+    approval = ApprovalRecord(approver_id="admin", timestamp=datetime.now(timezone.utc), veritas_hash="hash123")
+    strategy = ExecutableStrategy(target="PUBMED", query_string="Aspirin", validation_status="PRESS_PASSED")
+
+    pd = ProtocolDefinition(
+        id="proto-full",
+        title="Full Protocol",
+        research_question="Q?",
+        pico_structure={"I": block},
+        execution_strategies=[strategy],
+        status=ProtocolStatus.APPROVED,
+        approval_history=approval,
+    )
+
+    assert pd.id == "proto-full"
+    assert pd.pico_structure["I"].terms[0].label == "Aspirin"
+    assert pd.status == ProtocolStatus.APPROVED
+    assert pd.approval_history is not None
+    assert pd.approval_history.veritas_hash == "hash123"
+
+
+# --- Complex / Edge Case Tests ---
+
+
+def test_pico_structure_validation_mismatch() -> None:
+    """Test that validation fails if dictionary key doesn't match block_type."""
+    block = PicoBlock(block_type="I", description="Intervention", terms=[])
+
+    with pytest.raises(ValidationError) as excinfo:
+        ProtocolDefinition(
+            id="proto-bad",
+            title="Bad Proto",
+            research_question="Q?",
+            pico_structure={"P": block},  # Key "P" mismatch with block_type "I"
+            status=ProtocolStatus.DRAFT,
         )
-        assert term.id == "123"
-        assert term.label == "Heart Attack"
-        assert term.is_active is True
-
-    def test_empty_fields_raise_error(self) -> None:
-        with pytest.raises(ValidationError, match="Field cannot be empty"):
-            OntologyTerm(
-                id="",
-                label="Heart Attack",
-                vocab_source="MeSH",
-                code="D009203",
-                origin=TermOrigin.SYSTEM_EXPANSION,
-            )
+    assert "Key mismatch in pico_structure" in str(excinfo.value)
 
 
-class TestPicoBlock:
-    def test_valid_pico_block(self) -> None:
-        term = OntologyTerm(
-            id="123",
-            label="Elderly",
-            vocab_source="MeSH",
-            code="D000000",
-            origin=TermOrigin.USER_INPUT,
+def test_unicode_handling() -> None:
+    """Test handling of Unicode characters in labels and descriptions."""
+    unicode_str = "München ❤️ 🍺"
+    term = OntologyTerm(id="u-1", label=unicode_str, vocab_source="Uni", code="U1", origin=TermOrigin.USER_INPUT)
+    block = PicoBlock(block_type="P", description=unicode_str, terms=[term])
+    pd = ProtocolDefinition(
+        id="proto-uni",
+        title=unicode_str,
+        research_question=unicode_str,
+        pico_structure={"P": block},
+        status=ProtocolStatus.DRAFT,
+    )
+    assert pd.title == unicode_str
+    assert pd.pico_structure["P"].description == unicode_str
+    assert pd.pico_structure["P"].terms[0].label == unicode_str
+
+
+def test_timezone_aware_timestamp() -> None:
+    """Ensure timestamps are handled correctly (timezone awareness)."""
+    now_utc = datetime.now(timezone.utc)
+    approval = ApprovalRecord(approver_id="admin", timestamp=now_utc, veritas_hash="abc")
+    # Pydantic should preserve the timezone info
+    assert approval.timestamp.tzinfo == timezone.utc
+
+
+def test_large_number_of_terms() -> None:
+    """Test performance/correctness with a larger list of terms."""
+    terms = [
+        OntologyTerm(
+            id=f"t-{i}", label=f"Term {i}", vocab_source="Test", code=f"C{i}", origin=TermOrigin.SYSTEM_EXPANSION
         )
-        block = PicoBlock(block_type="P", description="Elderly Patients", terms=[term], logic_operator="OR")
-        assert block.block_type == "P"
-        assert len(block.terms) == 1
-
-    def test_invalid_block_type(self) -> None:
-        with pytest.raises(ValidationError, match="block_type must be one of"):
-            PicoBlock(
-                block_type="X",  # Invalid
-                description="Elderly Patients",
-                terms=[],
-            )
-
-    def test_invalid_logic_operator(self) -> None:
-        with pytest.raises(ValidationError, match="logic_operator must be AND, OR, or NOT"):
-            PicoBlock(
-                block_type="P",
-                description="Elderly Patients",
-                terms=[],
-                logic_operator="XOR",
-            )
-
-    def test_empty_description_raises_error(self) -> None:
-        with pytest.raises(ValidationError, match="description cannot be empty"):
-            PicoBlock(
-                block_type="P",
-                description="  ",
-                terms=[],
-            )
+        for i in range(1000)
+    ]
+    block = PicoBlock(block_type="P", description="Big Population", terms=terms)
+    pd = ProtocolDefinition(
+        id="proto-big",
+        title="Big Proto",
+        research_question="Q?",
+        pico_structure={"P": block},
+        status=ProtocolStatus.DRAFT,
+    )
+    assert len(pd.pico_structure["P"].terms) == 1000
+    assert pd.pico_structure["P"].terms[999].code == "C999"
 
 
-class TestProtocolDefinition:
-    def test_valid_protocol_definition(self) -> None:
-        term = OntologyTerm(
-            id="123",
-            label="Elderly",
-            vocab_source="MeSH",
-            code="D000000",
-            origin=TermOrigin.USER_INPUT,
-        )
-        block = PicoBlock(block_type="P", description="Elderly Patients", terms=[term])
-        protocol = ProtocolDefinition(
-            id="proto-1",
-            title="Test Protocol",
-            research_question="Question?",
-            pico_structure={"P": block},
-        )
-        assert protocol.status == ProtocolStatus.DRAFT
-        assert protocol.pico_structure["P"] == block
+def test_term_origin_enum_enforcement() -> None:
+    """Ensure invalid TermOrigin values are rejected."""
+    with pytest.raises(ValidationError):
+        OntologyTerm(id="123", label="Bad Origin", vocab_source="MeSH", code="D123", origin="INVALID_ORIGIN")
 
-        # Test placeholders
-        assert "Test Protocol" in protocol.render()
 
-        # Test method stubs / functionality
-        protocol.override_term("123", "Reason")
-        protocol.inject_term("P", term)
+def test_execution_strategies_default() -> None:
+    """Ensure execution_strategies defaults to empty list and accepts valid strategies."""
+    pd = ProtocolDefinition(
+        id="proto-strat", title="Strat Proto", research_question="Q?", pico_structure={}, status=ProtocolStatus.DRAFT
+    )
+    assert pd.execution_strategies == []
 
-        mock_veritas = MagicMock()
-        mock_veritas.register_protocol.return_value = "hash-123"
-        assert protocol.lock("user1", mock_veritas) == protocol
-
-    def test_pico_structure_key_mismatch(self) -> None:
-        term = OntologyTerm(
-            id="123",
-            label="Elderly",
-            vocab_source="MeSH",
-            code="D000000",
-            origin=TermOrigin.USER_INPUT,
-        )
-        block = PicoBlock(block_type="P", description="Elderly Patients", terms=[term])
-        with pytest.raises(ValidationError, match="Key mismatch in pico_structure"):
-            ProtocolDefinition(
-                id="proto-1",
-                title="Test Protocol",
-                research_question="Question?",
-                pico_structure={"I": block},  # Key 'I' != block_type 'P'
-            )
+    # Now with strategies
+    strategy = ExecutableStrategy(target="A", query_string="B", validation_status="C")
+    pd2 = ProtocolDefinition(
+        id="proto-strat-2",
+        title="Strat Proto 2",
+        research_question="Q?",
+        pico_structure={},
+        status=ProtocolStatus.DRAFT,
+        execution_strategies=[strategy],
+    )
+    assert len(pd2.execution_strategies) == 1

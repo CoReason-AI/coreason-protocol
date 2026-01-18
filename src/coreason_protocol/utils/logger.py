@@ -44,5 +44,3 @@ logger.add(
     enqueue=True,
     level="INFO",
 )
-
-__all__ = ["logger"]
