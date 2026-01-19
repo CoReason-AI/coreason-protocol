@@ -10,8 +10,11 @@ class ProtocolValidator:
     Ensures P/I/O blocks are present and not empty, and checks term validity.
     """
 
-    @staticmethod
-    def validate(protocol: "ProtocolDefinition") -> None:
+    REQUIRED_BLOCKS = frozenset({"P", "I", "O"})
+    VALID_LOGIC_OPERATORS = frozenset({"AND", "OR", "NOT"})
+
+    @classmethod
+    def validate(cls, protocol: "ProtocolDefinition") -> None:
         """
         Validates the protocol structure.
 
@@ -24,8 +27,7 @@ class ProtocolValidator:
         pico = protocol.pico_structure
 
         # 1. Structural Integrity: Ensure P, I, O blocks are not empty
-        required_blocks = ["P", "I", "O"]
-        for block_type in required_blocks:
+        for block_type in cls.REQUIRED_BLOCKS:
             if block_type not in pico:
                 raise ValueError(f"Missing required block: '{block_type}'")
 
@@ -36,7 +38,7 @@ class ProtocolValidator:
         # 2. Logic Validity: Verify Boolean operators
         # Iterate over all blocks, not just required ones (include C and S if present)
         for block_key, block in pico.items():
-            if block.logic_operator not in ("AND", "OR", "NOT"):
+            if block.logic_operator not in cls.VALID_LOGIC_OPERATORS:
                 raise ValueError(f"Block '{block_key}' has invalid logic_operator: '{block.logic_operator}'")
 
             # 3. Term Validity: Check for 'empty' terms (active terms with no label/code)

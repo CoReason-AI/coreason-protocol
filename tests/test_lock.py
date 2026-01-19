@@ -116,16 +116,12 @@ def test_lock_empty_pico_structure() -> None:
 
     veritas_mock = MagicMock(spec=VeritasClient)
 
-    # Note: With new validator, empty structure fails validation (Missing P, I, O)
-    # The error message from types.py "Cannot lock a protocol with an empty PICO structure"
-    # might still be triggered first if it's checked before the validator.
-    # Let's check the order in types.py.
-    # 1. Check status
-    # 2. Check not self.pico_structure (Empty PICO structure)
-    # 3. ProtocolValidator.validate(self)
-    # So "empty PICO structure" check comes FIRST.
+    # Note: Redundant check removed from types.py.
+    # ProtocolValidator now handles this, raising "Missing required block: '...'"
+    # Since set iteration order is not guaranteed, it might miss 'P', 'I', or 'O' first.
+    # We check for general match.
 
-    with pytest.raises(ValueError, match="Cannot lock a protocol with an empty PICO structure"):
+    with pytest.raises(ValueError, match="Missing required block:"):
         empty_proto.lock(user_id="user-1", veritas_client=veritas_mock)
 
 

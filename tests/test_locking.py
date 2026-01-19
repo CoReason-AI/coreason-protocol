@@ -68,8 +68,8 @@ def test_lock_fail_empty_pico() -> None:
     )
     mock_veritas = Mock()
 
-    # Updated expectation
-    with pytest.raises(ValueError, match="Cannot lock a protocol with an empty PICO structure"):
+    # Updated expectation: Now handled by Validator
+    with pytest.raises(ValueError, match="Missing required block:"):
         pd.lock("user", mock_veritas)
 
     mock_veritas.register_protocol.assert_not_called()

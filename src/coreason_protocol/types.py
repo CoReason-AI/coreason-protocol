@@ -209,10 +209,6 @@ class ProtocolDefinition(BaseModel):  # type: ignore[misc]
             # Matches existing test expectation
             raise ValueError("Cannot lock a protocol that is already APPROVED or EXECUTED")
 
-        if not self.pico_structure:
-            # Matches existing test expectation
-            raise ValueError("Cannot lock a protocol with an empty PICO structure")
-
         if self.status != ProtocolStatus.DRAFT:
             # Fallback for other states if any
             raise ValueError(f"Cannot lock protocol in state: {self.status}")
