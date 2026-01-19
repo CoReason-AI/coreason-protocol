@@ -15,9 +15,15 @@ from coreason_protocol.types import (
 def test_lock_success() -> None:
     # Setup
     term = OntologyTerm(id="1", label="T", vocab_source="S", code="C", origin=TermOrigin.USER_INPUT)
-    block = PicoBlock(block_type="P", description="Pop", terms=[term])
+    block_p = PicoBlock(block_type="P", description="Pop", terms=[term])
+    block_i = PicoBlock(block_type="I", description="Int", terms=[term])
+    block_o = PicoBlock(block_type="O", description="Out", terms=[term])
     pd = ProtocolDefinition(
-        id="proto-1", title="Test", research_question="Q", pico_structure={"P": block}, status=ProtocolStatus.DRAFT
+        id="proto-1",
+        title="Test",
+        research_question="Q",
+        pico_structure={"P": block_p, "I": block_i, "O": block_o},
+        status=ProtocolStatus.DRAFT,
     )
 
     # Mock Veritas
