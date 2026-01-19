@@ -16,13 +16,18 @@ class ProtocolValidator:
     @classmethod
     def validate(cls, protocol: "ProtocolDefinition") -> None:
         """
-        Validates the protocol structure.
+        Validates the protocol structure against PRESS guidelines and internal consistency rules.
+
+        Checks:
+        1. Structural Integrity: P, I, O blocks must exist and contain at least one term.
+        2. Logic Validity: Boolean operators (AND, OR, NOT) must be valid.
+        3. Term Validity: Active terms must have non-empty labels and codes.
 
         Args:
-            protocol: The protocol to validate.
+            protocol: The protocol definition to validate.
 
         Raises:
-            ValueError: If the protocol fails validation.
+            ValueError: If the protocol fails any validation check.
         """
         pico = protocol.pico_structure
 

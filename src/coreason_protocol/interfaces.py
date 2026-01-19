@@ -9,9 +9,9 @@ class VeritasClient(Protocol):
         Registers the protocol definition with Veritas.
 
         Args:
-            protocol_data: The JSON-serializable dictionary of the protocol.
+            protocol_data: The JSON-serializable dictionary of the protocol definition.
 
         Returns:
-            str: The hash/signature returned by Veritas.
+            str: The immutable cryptographic hash/signature returned by Veritas.
         """
         ...
