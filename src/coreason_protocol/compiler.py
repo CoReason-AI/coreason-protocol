@@ -18,7 +18,14 @@ class CompilerStrategy(Protocol):
     """Interface for target-specific strategy compilers."""
 
     def compile(self, protocol: ProtocolDefinition) -> str:
-        """Compiles the protocol into a target-specific query string."""
+        """Compiles the protocol into a target-specific query string.
+
+        Args:
+            protocol: The protocol to compile.
+
+        Returns:
+            str: The compiled query string.
+        """
         ...
 
 
@@ -29,6 +36,12 @@ class BaseCompiler:
         """
         Iterates over PICO blocks in standard order (P, I, C, O, S),
         yielding only blocks that are present and have at least one active term.
+
+        Args:
+            protocol: The protocol to iterate.
+
+        Yields:
+            Tuple[PicoBlock, List[OntologyTerm]]: A tuple containing the block and its list of active terms.
         """
         order = ["P", "I", "C", "O", "S"]
         for block_type in order:
@@ -49,6 +62,12 @@ class PubMedCompiler(BaseCompiler):
         """
         Generates PubMed/Ovid boolean strings.
         Logic: (P) AND (I) AND (C) AND (O) AND (S)
+
+        Args:
+            protocol: The protocol to compile.
+
+        Returns:
+            str: The compiled PubMed query string.
         """
         block_exprs = []
 
@@ -96,6 +115,12 @@ class PubMedCompiler(BaseCompiler):
         Formats a term for PubMed:
         - MeSH -> "Label"[Mesh]
         - Other -> "Label"[TiAb]
+
+        Args:
+            term: The ontology term to format.
+
+        Returns:
+            str: The formatted term string.
         """
         label = self._sanitize_label(term.label)
 
@@ -109,6 +134,12 @@ class PubMedCompiler(BaseCompiler):
         Sanitizes the label for use in a double-quoted PubMed string.
         - Trims whitespace.
         - Replaces double quotes with single quotes to prevent string breaking.
+
+        Args:
+            label: The label to sanitize.
+
+        Returns:
+            str: The sanitized label.
         """
         cleaned = label.strip()
         cleaned = cleaned.replace('"', "'")
@@ -118,6 +149,12 @@ class PubMedCompiler(BaseCompiler):
         """
         Recursive visitor to render AST to PubMed string format.
         Strictly parenthesized.
+
+        Args:
+            expr: The boolean expression to render.
+
+        Returns:
+            str: The rendered string.
         """
         if isinstance(expr, boolean.Symbol):
             # Symbol name is already formatted like "Term"[Tag]
@@ -146,6 +183,12 @@ class LanceDBCompiler(BaseCompiler):
         """
         Internal method to generate LanceDB JSON query string.
         Output format: {"vector": "research_question", "filter": ""}
+
+        Args:
+            protocol: The protocol to compile.
+
+        Returns:
+            str: JSON string representing the LanceDB query.
         """
         payload = {
             "vector": protocol.research_question,
@@ -164,6 +207,12 @@ class GraphCompiler(BaseCompiler):
         Logic:
           - Inter-block: AND (Chain of MATCH ... WITH p ...)
           - Intra-block: OR (WHERE t.code IN [...])
+
+        Args:
+            protocol: The protocol to compile.
+
+        Returns:
+            str: The generated Cypher query.
         """
         block_constraints = []
         for _, active_terms in self._iter_active_blocks(protocol):
@@ -192,6 +241,12 @@ class GraphCompiler(BaseCompiler):
         """
         Escapes a string for use in a Cypher single-quoted string literal.
         Handles backslashes and single quotes.
+
+        Args:
+            value: The string to escape.
+
+        Returns:
+            str: The escaped string.
         """
         # Order matters: replace backslash first, then single quote
         escaped = value.replace("\\", "\\\\").replace("'", "\\'")
@@ -220,7 +275,7 @@ class StrategyCompiler:
             target: The target execution engine (default: "PUBMED").
 
         Returns:
-            ExecutableStrategy object containing the compiled query string.
+            ExecutableStrategy: Object containing the compiled query string.
 
         Raises:
             ValueError: If the target is not supported.
