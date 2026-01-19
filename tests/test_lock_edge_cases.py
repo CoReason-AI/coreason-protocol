@@ -11,6 +11,8 @@
 from unittest.mock import MagicMock
 
 import pytest
+from pydantic import ValidationError
+
 from coreason_protocol.interfaces import VeritasClient
 from coreason_protocol.types import (
     OntologyTerm,
@@ -19,7 +21,6 @@ from coreason_protocol.types import (
     ProtocolStatus,
     TermOrigin,
 )
-from pydantic import ValidationError
 
 
 @pytest.fixture  # type: ignore[misc]

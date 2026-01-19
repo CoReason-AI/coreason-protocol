@@ -1,6 +1,8 @@
 from datetime import datetime, timezone
 
 import pytest
+from pydantic import ValidationError
+
 from coreason_protocol.types import (
     ApprovalRecord,
     ExecutableStrategy,
@@ -10,7 +12,6 @@ from coreason_protocol.types import (
     ProtocolStatus,
     TermOrigin,
 )
-from pydantic import ValidationError
 
 
 def test_ontology_term_defaults() -> None:

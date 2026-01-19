@@ -10,13 +10,14 @@
 
 
 import pytest
+from pydantic import ValidationError
+
 from coreason_protocol.types import (
     OntologyTerm,
     PicoBlock,
     ProtocolDefinition,
     TermOrigin,
 )
-from pydantic import ValidationError
 
 
 def test_validate_assignment_pico_structure() -> None:
