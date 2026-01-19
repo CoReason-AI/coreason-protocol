@@ -32,12 +32,24 @@ def valid_pico_structure() -> dict[str, PicoBlock]:
         code="D009203",
         origin=TermOrigin.USER_INPUT,
     )
-    block = PicoBlock(
-        block_type="P",
-        description="Patients",
-        terms=[term],
-    )
-    return {"P": block}
+    # Updated to include P, I, O as they are now mandatory
+    return {
+        "P": PicoBlock(
+            block_type="P",
+            description="Patients",
+            terms=[term],
+        ),
+        "I": PicoBlock(
+            block_type="I",
+            description="Intervention",
+            terms=[term],
+        ),
+        "O": PicoBlock(
+            block_type="O",
+            description="Outcome",
+            terms=[term],
+        ),
+    }
 
 
 @pytest.fixture  # type: ignore[misc]
@@ -104,7 +116,12 @@ def test_lock_empty_pico_structure() -> None:
 
     veritas_mock = MagicMock(spec=VeritasClient)
 
-    with pytest.raises(ValueError, match="Cannot lock a protocol with an empty PICO structure"):
+    # Note: Redundant check removed from types.py.
+    # ProtocolValidator now handles this, raising "Missing required block: '...'"
+    # Since set iteration order is not guaranteed, it might miss 'P', 'I', or 'O' first.
+    # We check for general match.
+
+    with pytest.raises(ValueError, match="Missing required block:"):
         empty_proto.lock(user_id="user-1", veritas_client=veritas_mock)
 
 
@@ -115,3 +132,14 @@ def test_lock_returns_self(protocol_definition: ProtocolDefinition) -> None:
 
     result = protocol_definition.lock(user_id="user-1", veritas_client=veritas_mock)
     assert result is protocol_definition
+
+
+def test_lock_fails_validation(protocol_definition: ProtocolDefinition) -> None:
+    """Test that lock raises ValueError if structural validation fails."""
+    # Remove 'O' block to cause validation failure
+    del protocol_definition.pico_structure["O"]
+
+    veritas_mock = MagicMock(spec=VeritasClient)
+
+    with pytest.raises(ValueError, match="Missing required block: 'O'"):
+        protocol_definition.lock(user_id="user-1", veritas_client=veritas_mock)

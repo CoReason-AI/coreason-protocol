@@ -15,9 +15,15 @@ from coreason_protocol.types import (
 def test_lock_success() -> None:
     # Setup
     term = OntologyTerm(id="1", label="T", vocab_source="S", code="C", origin=TermOrigin.USER_INPUT)
-    block = PicoBlock(block_type="P", description="Pop", terms=[term])
+    block_p = PicoBlock(block_type="P", description="Pop", terms=[term])
+    block_i = PicoBlock(block_type="I", description="Int", terms=[term])
+    block_o = PicoBlock(block_type="O", description="Out", terms=[term])
     pd = ProtocolDefinition(
-        id="proto-1", title="Test", research_question="Q", pico_structure={"P": block}, status=ProtocolStatus.DRAFT
+        id="proto-1",
+        title="Test",
+        research_question="Q",
+        pico_structure={"P": block_p, "I": block_i, "O": block_o},
+        status=ProtocolStatus.DRAFT,
     )
 
     # Mock Veritas
@@ -62,8 +68,8 @@ def test_lock_fail_empty_pico() -> None:
     )
     mock_veritas = Mock()
 
-    # Updated expectation
-    with pytest.raises(ValueError, match="Cannot lock a protocol with an empty PICO structure"):
+    # Updated expectation: Now handled by Validator
+    with pytest.raises(ValueError, match="Missing required block:"):
         pd.lock("user", mock_veritas)
 
     mock_veritas.register_protocol.assert_not_called()

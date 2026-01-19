@@ -37,11 +37,14 @@ def complex_protocol() -> ProtocolDefinition:
     term_i1 = OntologyTerm(id="t-i1", label="Aspirin", vocab_source="RxNorm", code="1191", origin=TermOrigin.USER_INPUT)
     block_i = PicoBlock(block_type="I", description="Intervention", terms=[term_i1])
 
+    term_o1 = OntologyTerm(id="t-o1", label="Death", vocab_source="MeSH", code="D003643", origin=TermOrigin.USER_INPUT)
+    block_o = PicoBlock(block_type="O", description="Outcome", terms=[term_o1])
+
     return ProtocolDefinition(
         id="proto-complex",
         title="Complex Protocol",
         research_question="Complex Question",
-        pico_structure={"P": block_p, "I": block_i},
+        pico_structure={"P": block_p, "I": block_i, "O": block_o},
     )
 
 
