@@ -1,5 +1,5 @@
-from enum import Enum
-from typing import Callable, Dict
+import json
+from typing import Dict, Protocol
 
 import boolean
 
@@ -7,63 +7,29 @@ from coreason_protocol.types import (
     ExecutableStrategy,
     OntologyTerm,
     ProtocolDefinition,
+    Target,
+    VocabSource,
 )
 from coreason_protocol.utils.logger import logger
 
 
-class Target(str, Enum):
-    PUBMED = "PUBMED"
+class CompilerStrategy(Protocol):
+    """Interface for target-specific strategy compilers."""
+
+    def compile(self, protocol: ProtocolDefinition) -> str:
+        """Compiles the protocol into a target-specific query string."""
+        ...
 
 
-class VocabSource(str, Enum):
-    MESH = "MeSH"
-
-
-class StrategyCompiler:
-    """
-    Compiles ProtocolDefinition into executable search strategies for various targets.
-    Uses boolean.py to construct Abstract Syntax Trees (AST) for logic robustness.
-    """
+class PubMedCompiler:
+    """Strategy for compiling protocols to PubMed query strings."""
 
     def __init__(self) -> None:
         self.algebra = boolean.BooleanAlgebra()
-        # Dispatch map for extensibility (Open/Closed Principle)
-        self._compilers: Dict[str, Callable[[ProtocolDefinition], str]] = {Target.PUBMED.value: self._compile_pubmed}
 
-    def compile(self, protocol: ProtocolDefinition, target: str = Target.PUBMED.value) -> ExecutableStrategy:
+    def compile(self, protocol: ProtocolDefinition) -> str:
         """
-        Compiles the protocol for a specific target.
-
-        Args:
-            protocol: The protocol to compile.
-            target: The target execution engine (default: "PUBMED").
-
-        Returns:
-            ExecutableStrategy object containing the compiled query string.
-
-        Raises:
-            ValueError: If the target is not supported.
-        """
-        logger.debug(f"Compiling protocol {protocol.id} for target {target}")
-
-        compiler_func = self._compilers.get(target)
-        if not compiler_func:
-            logger.error(f"Unsupported target requested: {target}")
-            raise ValueError(f"Unsupported target: {target}")
-
-        query_string = compiler_func(protocol)
-
-        logger.info(f"Successfully compiled protocol {protocol.id} for {target}")
-
-        return ExecutableStrategy(
-            target=target,
-            query_string=query_string,
-            validation_status="PRESS_PASSED",  # Placeholder until validation logic exists
-        )
-
-    def _compile_pubmed(self, protocol: ProtocolDefinition) -> str:
-        """
-        Internal method to generate PubMed/Ovid boolean strings.
+        Generates PubMed/Ovid boolean strings.
         Logic: (P) AND (I) AND (C) AND (O) AND (S)
         """
         # 1. Build AST for each block
@@ -169,3 +135,62 @@ class StrategyCompiler:
             return f"({' AND '.join(children)})"
 
         return str(expr)  # pragma: no cover
+
+
+class LanceDBCompiler:
+    """Strategy for compiling protocols to LanceDB queries."""
+
+    def compile(self, protocol: ProtocolDefinition) -> str:
+        """
+        Internal method to generate LanceDB JSON query string.
+        Output format: {"vector": "research_question", "filter": ""}
+        """
+        payload = {
+            "vector": protocol.research_question,
+            "filter": "",  # Placeholder as per requirements
+        }
+        return json.dumps(payload)
+
+
+class StrategyCompiler:
+    """
+    Compiles ProtocolDefinition into executable search strategies for various targets.
+    Uses the Strategy Pattern to delegate compilation to target-specific implementations.
+    """
+
+    def __init__(self) -> None:
+        self._compilers: Dict[str, CompilerStrategy] = {
+            Target.PUBMED.value: PubMedCompiler(),
+            Target.LANCEDB.value: LanceDBCompiler(),
+        }
+
+    def compile(self, protocol: ProtocolDefinition, target: str = Target.PUBMED.value) -> ExecutableStrategy:
+        """
+        Compiles the protocol for a specific target.
+
+        Args:
+            protocol: The protocol to compile.
+            target: The target execution engine (default: "PUBMED").
+
+        Returns:
+            ExecutableStrategy object containing the compiled query string.
+
+        Raises:
+            ValueError: If the target is not supported.
+        """
+        logger.debug(f"Compiling protocol {protocol.id} for target {target}")
+
+        compiler = self._compilers.get(target)
+        if not compiler:
+            logger.error(f"Unsupported target requested: {target}")
+            raise ValueError(f"Unsupported target: {target}")
+
+        query_string = compiler.compile(protocol)
+
+        logger.info(f"Successfully compiled protocol {protocol.id} for {target}")
+
+        return ExecutableStrategy(
+            target=target,
+            query_string=query_string,
+            validation_status="PRESS_PASSED",  # Placeholder until validation logic exists
+        )
