@@ -1,3 +1,4 @@
+import json
 from enum import Enum
 from typing import Callable, Dict
 
@@ -13,6 +14,7 @@ from coreason_protocol.utils.logger import logger
 
 class Target(str, Enum):
     PUBMED = "PUBMED"
+    LANCEDB = "LANCEDB"
 
 
 class VocabSource(str, Enum):
@@ -28,7 +30,10 @@ class StrategyCompiler:
     def __init__(self) -> None:
         self.algebra = boolean.BooleanAlgebra()
         # Dispatch map for extensibility (Open/Closed Principle)
-        self._compilers: Dict[str, Callable[[ProtocolDefinition], str]] = {Target.PUBMED.value: self._compile_pubmed}
+        self._compilers: Dict[str, Callable[[ProtocolDefinition], str]] = {
+            Target.PUBMED.value: self._compile_pubmed,
+            Target.LANCEDB.value: self._compile_lancedb,
+        }
 
     def compile(self, protocol: ProtocolDefinition, target: str = Target.PUBMED.value) -> ExecutableStrategy:
         """
@@ -169,3 +174,14 @@ class StrategyCompiler:
             return f"({' AND '.join(children)})"
 
         return str(expr)  # pragma: no cover
+
+    def _compile_lancedb(self, protocol: ProtocolDefinition) -> str:
+        """
+        Internal method to generate LanceDB JSON query string.
+        Output format: {"vector": "research_question", "filter": ""}
+        """
+        payload = {
+            "vector": protocol.research_question,
+            "filter": "",  # Placeholder as per requirements
+        }
+        return json.dumps(payload)
