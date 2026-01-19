@@ -11,29 +11,67 @@ if TYPE_CHECKING:
 
 
 class TermOrigin(str, Enum):
-    USER_INPUT = "USER_INPUT"  # The user typed this
-    SYSTEM_EXPANSION = "SYSTEM_EXPANSION"  # Codex added this (Ontology child)
-    HUMAN_INJECTION = "HUMAN_INJECTION"  # Reviewer added this manually
+    """
+    Origin of a term in the protocol.
+
+    Attributes:
+        USER_INPUT: The term was explicitly provided by the user.
+        SYSTEM_EXPANSION: The term was added by the system via ontology expansion.
+        HUMAN_INJECTION: The term was manually injected by a human reviewer.
+    """
+
+    USER_INPUT = "USER_INPUT"
+    SYSTEM_EXPANSION = "SYSTEM_EXPANSION"
+    HUMAN_INJECTION = "HUMAN_INJECTION"
 
 
 class Target(str, Enum):
+    """
+    Supported execution targets for the protocol.
+
+    Attributes:
+        PUBMED: PubMed/MEDLINE database.
+        LANCEDB: LanceDB vector database.
+        GRAPH: Graph database (e.g., Neo4j).
+    """
+
     PUBMED = "PUBMED"
     LANCEDB = "LANCEDB"
     GRAPH = "GRAPH"
 
 
 class VocabSource(str, Enum):
+    """
+    Controlled vocabulary sources.
+
+    Attributes:
+        MESH: Medical Subject Headings.
+    """
+
     MESH = "MeSH"
 
 
 class OntologyTerm(BaseModel):  # type: ignore[misc]
-    id: str  # UUID
-    label: str  # "Myocardial Infarction"
-    vocab_source: str  # "MeSH"
-    code: str  # "D009203"
+    """
+    Represents a single term from a controlled vocabulary.
+
+    Attributes:
+        id: Unique identifier (UUID).
+        label: Human-readable label (e.g., "Myocardial Infarction").
+        vocab_source: Source vocabulary (e.g., "MeSH").
+        code: Concept code (e.g., "D009203").
+        origin: How this term was added to the protocol.
+        is_active: Whether the term is active or soft-deleted.
+        override_reason: Reason for soft-deletion, if applicable.
+    """
+
+    id: str
+    label: str
+    vocab_source: str
+    code: str
     origin: TermOrigin
-    is_active: bool = True  # False if soft-deleted by human
-    override_reason: Optional[str] = None  # e.g., "Term captures non-human studies"
+    is_active: bool = True
+    override_reason: Optional[str] = None
 
     model_config = ConfigDict(validate_assignment=True)
 
@@ -46,10 +84,20 @@ class OntologyTerm(BaseModel):  # type: ignore[misc]
 
 
 class PicoBlock(BaseModel):  # type: ignore[misc]
-    block_type: str  # "P", "I", "C", "O", "S"
-    description: str  # "Elderly Patients"
-    terms: List[OntologyTerm]  # The curated list of terms
-    logic_operator: str = "OR"  # Logic intra-block
+    """
+    Represents a PICO block (Population, Intervention, Comparator, Outcome, Study Design).
+
+    Attributes:
+        block_type: The type of block (P, I, C, O, S).
+        description: A human-readable description of the block's intent.
+        terms: List of ontology terms in this block.
+        logic_operator: Intra-block logic operator (AND, OR, NOT).
+    """
+
+    block_type: str
+    description: str
+    terms: List[OntologyTerm]
+    logic_operator: str = "OR"
 
     model_config = ConfigDict(validate_assignment=True)
 
@@ -69,22 +117,50 @@ class PicoBlock(BaseModel):  # type: ignore[misc]
 
 
 class ProtocolStatus(str, Enum):
+    """
+    Lifecycle status of a protocol.
+
+    Attributes:
+        DRAFT: Initial design phase, mutable.
+        PENDING_REVIEW: Submitted for review, immutable except for reviewer actions.
+        APPROVED: Finalized, locked, and registered with Veritas.
+        EXECUTED: Has been run against a target.
+    """
+
     DRAFT = "DRAFT"
     PENDING_REVIEW = "PENDING_REVIEW"
-    APPROVED = "APPROVED"  # Locked & Registered
+    APPROVED = "APPROVED"
     EXECUTED = "EXECUTED"
 
 
 class ExecutableStrategy(BaseModel):  # type: ignore[misc]
-    target: str  # "PUBMED", "LANCEDB"
-    query_string: str  # The compiled code string
-    validation_status: str  # "PRESS_PASSED" or "WARNINGS"
+    """
+    A compiled search strategy for a specific target.
+
+    Attributes:
+        target: The target execution engine.
+        query_string: The compiled query code.
+        validation_status: Status of automated validation (e.g., PRESS checks).
+    """
+
+    target: str
+    query_string: str
+    validation_status: str
 
 
 class ApprovalRecord(BaseModel):  # type: ignore[misc]
+    """
+    Record of a human sign-off event.
+
+    Attributes:
+        approver_id: ID of the user who approved the protocol.
+        timestamp: When the approval occurred.
+        veritas_hash: The immutable hash returned by the audit system.
+    """
+
     approver_id: str
     timestamp: datetime
-    veritas_hash: str  # The hash returned by Coreason-Veritas
+    veritas_hash: str
 
     @field_validator("veritas_hash")  # type: ignore[misc]
     @classmethod
@@ -95,9 +171,23 @@ class ApprovalRecord(BaseModel):  # type: ignore[misc]
 
 
 class ProtocolDefinition(BaseModel):  # type: ignore[misc]
+    """
+    The master definition of a search protocol.
+    Acts as the "Design Plane" state machine.
+
+    Attributes:
+        id: Unique identifier for the protocol.
+        title: Human-readable title.
+        research_question: The original natural language intent.
+        pico_structure: Dictionary of PICO blocks defining the search logic.
+        execution_strategies: List of compiled strategies for different targets.
+        status: Current lifecycle state.
+        approval_history: Record of final approval and registration.
+    """
+
     id: str
     title: str
-    research_question: str  # Original natural language input
+    research_question: str
 
     # Design Layer (Mutable in DRAFT)
     pico_structure: Dict[str, PicoBlock]
@@ -129,7 +219,7 @@ class ProtocolDefinition(BaseModel):  # type: ignore[misc]
             format: Output format, currently only 'html' is supported.
 
         Returns:
-            HTML string representation of the protocol.
+            str: HTML string representation of the protocol.
 
         Raises:
             ValueError: If format is not 'html'.
@@ -214,7 +304,18 @@ class ProtocolDefinition(BaseModel):  # type: ignore[misc]
         return label  # pragma: no cover
 
     def lock(self, user_id: str, veritas_client: "VeritasClient") -> "ProtocolDefinition":
-        """Finalizes the protocol and registers with Veritas."""
+        """Finalizes the protocol and registers with Veritas.
+
+        Args:
+            user_id: The ID of the user approving the protocol.
+            veritas_client: Client for the Veritas audit system.
+
+        Returns:
+            ProtocolDefinition: The locked protocol instance (self).
+
+        Raises:
+            ValueError: If protocol is already approved/executed or validation fails.
+        """
         if self.status in (ProtocolStatus.APPROVED, ProtocolStatus.EXECUTED):
             # Matches existing test expectation
             raise ValueError("Cannot lock a protocol that is already APPROVED or EXECUTED")
