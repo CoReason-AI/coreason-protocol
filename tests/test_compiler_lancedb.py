@@ -6,7 +6,7 @@ from coreason_protocol.compiler import StrategyCompiler
 from coreason_protocol.types import ProtocolDefinition, ProtocolStatus
 
 
-@pytest.fixture
+@pytest.fixture  # type: ignore[misc]
 def basic_protocol_lancedb() -> ProtocolDefinition:
     return ProtocolDefinition(
         id="proto-lance",
