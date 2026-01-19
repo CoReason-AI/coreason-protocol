@@ -1,11 +1,12 @@
 import json
-from typing import Dict, Protocol
+from typing import Dict, Iterator, List, Protocol, Tuple
 
 import boolean
 
 from coreason_protocol.types import (
     ExecutableStrategy,
     OntologyTerm,
+    PicoBlock,
     ProtocolDefinition,
     Target,
     VocabSource,
@@ -21,7 +22,24 @@ class CompilerStrategy(Protocol):
         ...
 
 
-class PubMedCompiler:
+class BaseCompiler:
+    """Base class containing common logic for PICO block iteration."""
+
+    def _iter_active_blocks(self, protocol: ProtocolDefinition) -> Iterator[Tuple[PicoBlock, List[OntologyTerm]]]:
+        """
+        Iterates over PICO blocks in standard order (P, I, C, O, S),
+        yielding only blocks that are present and have at least one active term.
+        """
+        order = ["P", "I", "C", "O", "S"]
+        for block_type in order:
+            if block_type in protocol.pico_structure:
+                block = protocol.pico_structure[block_type]
+                active_terms = [t for t in block.terms if t.is_active]
+                if active_terms:
+                    yield block, active_terms
+
+
+class PubMedCompiler(BaseCompiler):
     """Strategy for compiling protocols to PubMed query strings."""
 
     def __init__(self) -> None:
@@ -32,24 +50,9 @@ class PubMedCompiler:
         Generates PubMed/Ovid boolean strings.
         Logic: (P) AND (I) AND (C) AND (O) AND (S)
         """
-        # 1. Build AST for each block
         block_exprs = []
 
-        # Order matters: P, I, C, O, S
-        order = ["P", "I", "C", "O", "S"]
-
-        for block_type in order:
-            if block_type not in protocol.pico_structure:
-                continue
-
-            block = protocol.pico_structure[block_type]
-
-            # Filter active terms
-            active_terms = [t for t in block.terms if t.is_active]
-
-            if not active_terms:
-                continue
-
+        for block, active_terms in self._iter_active_blocks(protocol):
             # Create term symbols
             term_symbols = []
             for term in active_terms:
@@ -65,7 +68,6 @@ class PubMedCompiler:
                 elif block.logic_operator == "AND":
                     block_expr = self.algebra.AND(*term_symbols)
                 elif block.logic_operator == "NOT":
-                    # Interpret as NOT(OR(...))? Or AND(NOT T1, NOT T2)?
                     # Standard interpretation for a "NOT" block usually implies exclusion.
                     # But if it's "logic_operator" inside a block, we'll assume join with AND
                     # and negate each term.
@@ -137,7 +139,7 @@ class PubMedCompiler:
         return str(expr)  # pragma: no cover
 
 
-class LanceDBCompiler:
+class LanceDBCompiler(BaseCompiler):
     """Strategy for compiling protocols to LanceDB queries."""
 
     def compile(self, protocol: ProtocolDefinition) -> str:
@@ -152,6 +154,50 @@ class LanceDBCompiler:
         return json.dumps(payload)
 
 
+class GraphCompiler(BaseCompiler):
+    """Strategy for compiling protocols to Graph (Cypher) queries."""
+
+    def compile(self, protocol: ProtocolDefinition) -> str:
+        """
+        Generates Cypher traversal logic.
+        Matches publications containing terms from all required PICO blocks.
+        Logic:
+          - Inter-block: AND (Chain of MATCH ... WITH p ...)
+          - Intra-block: OR (WHERE t.code IN [...])
+        """
+        block_constraints = []
+        for _, active_terms in self._iter_active_blocks(protocol):
+            # Create a list of sanitized, quoted codes for each block
+            codes_list = [self._escape_cypher_string(t.code) for t in active_terms]
+            if codes_list:
+                block_constraints.append(codes_list)
+
+        if not block_constraints:
+            return ""
+
+        parts = []
+        for i, codes in enumerate(block_constraints):
+            # Join codes into a Cypher list: ['C1', 'C2']
+            codes_str = f"[{', '.join(codes)}]"
+
+            if i == 0:
+                parts.append(f"MATCH (p:Publication)-[:HAS_MESH]->(t:Term) WHERE t.code IN {codes_str}")
+            else:
+                parts.append(f"WITH p MATCH (p)-[:HAS_MESH]->(t:Term) WHERE t.code IN {codes_str}")
+
+        parts.append("RETURN p")
+        return " ".join(parts)
+
+    def _escape_cypher_string(self, value: str) -> str:
+        """
+        Escapes a string for use in a Cypher single-quoted string literal.
+        Handles backslashes and single quotes.
+        """
+        # Order matters: replace backslash first, then single quote
+        escaped = value.replace("\\", "\\\\").replace("'", "\\'")
+        return f"'{escaped}'"
+
+
 class StrategyCompiler:
     """
     Compiles ProtocolDefinition into executable search strategies for various targets.
@@ -162,6 +208,7 @@ class StrategyCompiler:
         self._compilers: Dict[str, CompilerStrategy] = {
             Target.PUBMED.value: PubMedCompiler(),
             Target.LANCEDB.value: LanceDBCompiler(),
+            Target.GRAPH.value: GraphCompiler(),
         }
 
     def compile(self, protocol: ProtocolDefinition, target: str = Target.PUBMED.value) -> ExecutableStrategy:
