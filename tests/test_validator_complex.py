@@ -219,3 +219,34 @@ def test_large_payload_performance(base_term: OntologyTerm) -> None:
 
     # Should run quickly and pass
     ProtocolValidator.validate(protocol)
+
+
+def test_validator_case_mismatch(kitchen_sink_structure: Dict[str, PicoBlock]) -> None:
+    """
+    Test that lowercase keys in pico_structure (e.g., 'p') are treated as
+    missing required blocks (since validator expects 'P').
+    """
+    # Construct a protocol with lowercase keys
+    # We must use model_construct because Pydantic validator in types.py
+    # enforces key == block.block_type.
+
+    # Create a structure where key is 'p' but block_type is 'P' (or 'p')
+    # If we map 'p' -> Block('P'), Pydantic would raise "Key mismatch".
+    # We bypass Pydantic.
+
+    bad_structure = {
+        "p": kitchen_sink_structure["P"],  # key mismatch
+        "I": kitchen_sink_structure["I"],
+        "O": kitchen_sink_structure["O"],
+    }
+
+    protocol = ProtocolDefinition.model_construct(
+        id="proto-case",
+        title="Case Mismatch",
+        research_question="Q",
+        pico_structure=bad_structure,
+    )
+
+    # Validator looks for "P". It won't find it.
+    with pytest.raises(ValueError, match="Missing required block: 'P'"):
+        ProtocolValidator.validate(protocol)
