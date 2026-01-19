@@ -1,3 +1,5 @@
+"""Compiler module for converting ProtocolDefinitions into executable strategies."""
+
 import json
 from typing import Dict, Iterator, List, Protocol, Tuple
 
@@ -33,9 +35,9 @@ class BaseCompiler:
     """Base class containing common logic for PICO block iteration."""
 
     def _iter_active_blocks(self, protocol: ProtocolDefinition) -> Iterator[Tuple[PicoBlock, List[OntologyTerm]]]:
-        """
-        Iterates over PICO blocks in standard order (P, I, C, O, S),
-        yielding only blocks that are present and have at least one active term.
+        """Iterates over PICO blocks in standard order (P, I, C, O, S).
+
+        Yields only blocks that are present and have at least one active term.
 
         Args:
             protocol: The protocol to iterate.
@@ -56,11 +58,12 @@ class PubMedCompiler(BaseCompiler):
     """Strategy for compiling protocols to PubMed query strings."""
 
     def __init__(self) -> None:
+        """Initialize the Boolean algebra engine."""
         self.algebra = boolean.BooleanAlgebra()
 
     def compile(self, protocol: ProtocolDefinition) -> str:
-        """
-        Generates PubMed/Ovid boolean strings.
+        """Generates PubMed/Ovid boolean strings.
+
         Logic: (P) AND (I) AND (C) AND (O) AND (S)
 
         Args:
@@ -111,8 +114,8 @@ class PubMedCompiler(BaseCompiler):
         return self._render_pubmed_ast(final_ast)
 
     def _format_pubmed_term(self, term: OntologyTerm) -> str:
-        """
-        Formats a term for PubMed:
+        """Formats a term for PubMed.
+
         - MeSH -> "Label"[Mesh]
         - Other -> "Label"[TiAb]
 
@@ -130,8 +133,8 @@ class PubMedCompiler(BaseCompiler):
             return f'"{label}"[TiAb]'
 
     def _sanitize_label(self, label: str) -> str:
-        """
-        Sanitizes the label for use in a double-quoted PubMed string.
+        """Sanitizes the label for use in a double-quoted PubMed string.
+
         - Trims whitespace.
         - Replaces double quotes with single quotes to prevent string breaking.
 
@@ -146,8 +149,8 @@ class PubMedCompiler(BaseCompiler):
         return cleaned
 
     def _render_pubmed_ast(self, expr: boolean.Expression) -> str:
-        """
-        Recursive visitor to render AST to PubMed string format.
+        """Recursive visitor to render AST to PubMed string format.
+
         Strictly parenthesized.
 
         Args:
@@ -180,8 +183,8 @@ class LanceDBCompiler(BaseCompiler):
     """Strategy for compiling protocols to LanceDB queries."""
 
     def compile(self, protocol: ProtocolDefinition) -> str:
-        """
-        Internal method to generate LanceDB JSON query string.
+        """Internal method to generate LanceDB JSON query string.
+
         Output format: {"vector": "research_question", "filter": ""}
 
         Args:
@@ -201,8 +204,8 @@ class GraphCompiler(BaseCompiler):
     """Strategy for compiling protocols to Graph (Cypher) queries."""
 
     def compile(self, protocol: ProtocolDefinition) -> str:
-        """
-        Generates Cypher traversal logic.
+        """Generates Cypher traversal logic.
+
         Matches publications containing terms from all required PICO blocks.
         Logic:
           - Inter-block: AND (Chain of MATCH ... WITH p ...)
@@ -238,8 +241,8 @@ class GraphCompiler(BaseCompiler):
         return " ".join(parts)
 
     def _escape_cypher_string(self, value: str) -> str:
-        """
-        Escapes a string for use in a Cypher single-quoted string literal.
+        """Escapes a string for use in a Cypher single-quoted string literal.
+
         Handles backslashes and single quotes.
 
         Args:
@@ -254,12 +257,13 @@ class GraphCompiler(BaseCompiler):
 
 
 class StrategyCompiler:
-    """
-    Compiles ProtocolDefinition into executable search strategies for various targets.
+    """Compiles ProtocolDefinition into executable search strategies for various targets.
+
     Uses the Strategy Pattern to delegate compilation to target-specific implementations.
     """
 
     def __init__(self) -> None:
+        """Initialize the compiler with supported strategies."""
         self._compilers: Dict[str, CompilerStrategy] = {
             Target.PUBMED.value: PubMedCompiler(),
             Target.LANCEDB.value: LanceDBCompiler(),
@@ -267,8 +271,7 @@ class StrategyCompiler:
         }
 
     def compile(self, protocol: ProtocolDefinition, target: str = Target.PUBMED.value) -> ExecutableStrategy:
-        """
-        Compiles the protocol for a specific target.
+        """Compiles the protocol for a specific target.
 
         Args:
             protocol: The protocol to compile.
