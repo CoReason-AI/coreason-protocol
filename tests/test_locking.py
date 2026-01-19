@@ -1,7 +1,6 @@
 from unittest.mock import Mock
 
 import pytest
-
 from coreason_protocol.interfaces import VeritasClient
 from coreason_protocol.types import (
     OntologyTerm,

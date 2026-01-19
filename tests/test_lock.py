@@ -12,7 +12,6 @@ from datetime import timezone
 from unittest.mock import MagicMock
 
 import pytest
-
 from coreason_protocol.interfaces import VeritasClient
 from coreason_protocol.types import (
     OntologyTerm,

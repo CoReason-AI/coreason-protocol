@@ -178,7 +178,9 @@ class GraphCompiler:
             if not active_terms:
                 continue
 
-            codes = [f"'{t.code}'" for t in active_terms]
+            # Sanitize codes: escape single quotes
+            sanitized_codes = [t.code.replace("'", "\\'") for t in active_terms]
+            codes = [f"'{c}'" for c in sanitized_codes]
             codes_str = f"[{', '.join(codes)}]"
 
             if first_block:

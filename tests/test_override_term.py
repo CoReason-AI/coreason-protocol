@@ -9,7 +9,6 @@
 # Source Code: https://github.com/CoReason-AI/coreason_protocol
 
 import pytest
-
 from coreason_protocol.types import (
     OntologyTerm,
     PicoBlock,

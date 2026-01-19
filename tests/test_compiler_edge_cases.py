@@ -1,5 +1,4 @@
 import pytest
-
 from coreason_protocol.compiler import StrategyCompiler
 from coreason_protocol.types import (
     OntologyTerm,

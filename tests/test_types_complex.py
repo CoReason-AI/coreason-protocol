@@ -11,8 +11,6 @@
 from datetime import datetime, timedelta, timezone
 
 import pytest
-from pydantic import ValidationError
-
 from coreason_protocol.types import (
     ApprovalRecord,
     OntologyTerm,
@@ -21,6 +19,7 @@ from coreason_protocol.types import (
     ProtocolStatus,
     TermOrigin,
 )
+from pydantic import ValidationError
 
 
 def test_pico_structure_key_mismatch() -> None:
