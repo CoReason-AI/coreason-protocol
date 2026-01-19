@@ -16,6 +16,15 @@ class TermOrigin(str, Enum):
     HUMAN_INJECTION = "HUMAN_INJECTION"  # Reviewer added this manually
 
 
+class Target(str, Enum):
+    PUBMED = "PUBMED"
+    LANCEDB = "LANCEDB"
+
+
+class VocabSource(str, Enum):
+    MESH = "MeSH"
+
+
 class OntologyTerm(BaseModel):  # type: ignore[misc]
     id: str  # UUID
     label: str  # "Myocardial Infarction"

@@ -134,7 +134,7 @@ def test_compile_pubmed_empty_block(basic_protocol: ProtocolDefinition) -> None:
 def test_compile_pubmed_unsupported_target(basic_protocol: ProtocolDefinition) -> None:
     compiler = StrategyCompiler()
     with pytest.raises(ValueError, match="Unsupported target"):
-        compiler.compile(basic_protocol, target="LANCEDB")
+        compiler.compile(basic_protocol, target="INVALID_TARGET")
 
 
 def test_protocol_convenience_method(basic_protocol: ProtocolDefinition) -> None:
