@@ -152,6 +152,49 @@ class LanceDBCompiler:
         return json.dumps(payload)
 
 
+class GraphCompiler:
+    """Strategy for compiling protocols to Graph (Cypher) queries."""
+
+    def compile(self, protocol: ProtocolDefinition) -> str:
+        """
+        Generates Cypher traversal logic.
+        Matches publications containing terms from all required PICO blocks.
+        Logic:
+          - Inter-block: AND (Chain of MATCH ... WITH p ...)
+          - Intra-block: OR (WHERE t.code IN [...])
+        """
+        parts = []
+        # Standard PICO order
+        order = ["P", "I", "C", "O", "S"]
+        first_block = True
+
+        for block_type in order:
+            if block_type not in protocol.pico_structure:
+                continue
+
+            block = protocol.pico_structure[block_type]
+            active_terms = [t for t in block.terms if t.is_active]
+
+            if not active_terms:
+                continue
+
+            codes = [f"'{t.code}'" for t in active_terms]
+            codes_str = f"[{', '.join(codes)}]"
+
+            if first_block:
+                parts.append(f"MATCH (p:Publication)-[:HAS_MESH]->(t:Term) WHERE t.code IN {codes_str}")
+                first_block = False
+            else:
+                parts.append("WITH p")
+                parts.append(f"MATCH (p)-[:HAS_MESH]->(t:Term) WHERE t.code IN {codes_str}")
+
+        if not parts:
+            return ""
+
+        parts.append("RETURN p")
+        return " ".join(parts)
+
+
 class StrategyCompiler:
     """
     Compiles ProtocolDefinition into executable search strategies for various targets.
@@ -162,6 +205,7 @@ class StrategyCompiler:
         self._compilers: Dict[str, CompilerStrategy] = {
             Target.PUBMED.value: PubMedCompiler(),
             Target.LANCEDB.value: LanceDBCompiler(),
+            Target.GRAPH.value: GraphCompiler(),
         }
 
     def compile(self, protocol: ProtocolDefinition, target: str = Target.PUBMED.value) -> ExecutableStrategy:

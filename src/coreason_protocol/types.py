@@ -19,6 +19,7 @@ class TermOrigin(str, Enum):
 class Target(str, Enum):
     PUBMED = "PUBMED"
     LANCEDB = "LANCEDB"
+    GRAPH = "GRAPH"
 
 
 class VocabSource(str, Enum):
