@@ -37,6 +37,30 @@ def test_compile_graph_injection_prevention(basic_proto_with_quotes: ProtocolDef
     assert "['O\\'Neil']" in qs
 
 
+def test_compile_graph_backslash_injection() -> None:
+    # Test case for backslash injection
+    term = OntologyTerm(
+        id="t_bs",
+        label="Backslash",
+        vocab_source="MeSH",
+        code="C\\ode",  # Contains backslash
+        origin=TermOrigin.USER_INPUT,
+    )
+    pico = {"P": PicoBlock(block_type="P", description="Pop", terms=[term])}
+    proto = ProtocolDefinition(
+        id="p_bs", title="T", research_question="Q", pico_structure=pico, status=ProtocolStatus.DRAFT
+    )
+
+    compiler = StrategyCompiler()
+    strategy = compiler.compile(proto, target="GRAPH")
+    qs = strategy.query_string
+
+    # Expected: 'C\\ode' -> 'C\\\\ode' in Cypher string literal
+    # Python string representation of that is "C\\\\ode"
+    assert "C\\\\ode" in qs
+    assert "['C\\\\ode']" in qs
+
+
 def test_compile_graph_full_pico_structure() -> None:
     # Construct full P, I, C, O, S
     terms = [
