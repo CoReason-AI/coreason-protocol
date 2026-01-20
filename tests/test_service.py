@@ -98,6 +98,49 @@ async def test_service_async_lock_invalid_state(protocol_definition: ProtocolDef
 
 
 @pytest.mark.asyncio  # type: ignore[misc]
+async def test_service_async_lock_pending_review(protocol_definition: ProtocolDefinition) -> None:
+    # Set pending review state - should raise specific error
+    protocol_definition.status = ProtocolStatus.PENDING_REVIEW
+
+    svc = ProtocolServiceAsync()
+    with pytest.raises(ValueError, match="Cannot lock protocol in state: .*PENDING_REVIEW"):
+        await svc.lock_protocol(protocol_definition, "user-1")
+    await svc.__aexit__(None, None, None)
+
+
+@pytest.mark.asyncio  # type: ignore[misc]
+async def test_service_async_lock_response_variants(protocol_definition: ProtocolDefinition) -> None:
+    # Variant 1: Response is a string
+    mock_client = MagicMock(spec=httpx.AsyncClient)
+    mock_response = MagicMock(spec=httpx.Response)
+    mock_response.json.return_value = "hash-string-123"
+    mock_response.raise_for_status = MagicMock()
+
+    async def async_post(*args: Any, **kwargs: Any) -> MagicMock:
+        return mock_response
+
+    async def async_aclose() -> None:
+        pass
+
+    mock_client.post = async_post
+    mock_client.aclose = async_aclose
+
+    async with ProtocolServiceAsync(client=mock_client) as svc:
+        result = await svc.lock_protocol(protocol_definition, "user-string")
+        assert result.approval_history is not None
+        assert result.approval_history.veritas_hash == "hash-string-123"
+
+    # Variant 2: Response is unknown dict
+    protocol_definition.status = ProtocolStatus.DRAFT  # Reset
+    mock_response.json.return_value = {"other": "value"}
+
+    async with ProtocolServiceAsync(client=mock_client) as svc:
+        result = await svc.lock_protocol(protocol_definition, "user-fallback")
+        assert result.approval_history is not None
+        assert result.approval_history.veritas_hash == "{'other': 'value'}"
+
+
+@pytest.mark.asyncio  # type: ignore[misc]
 async def test_service_async_lock_http_error(protocol_definition: ProtocolDefinition) -> None:
     # Mock client to raise HTTPError
     mock_client = MagicMock(spec=httpx.AsyncClient)
