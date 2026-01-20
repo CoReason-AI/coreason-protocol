@@ -23,6 +23,7 @@ __email__ = "gowtham.rao@coreason.ai"
 
 from .compiler import StrategyCompiler
 from .interfaces import VeritasClient
+from .service import ProtocolService, ProtocolServiceAsync
 from .types import (
     ApprovalRecord,
     ExecutableStrategy,
@@ -43,4 +44,6 @@ __all__ = [
     "StrategyCompiler",
     "TermOrigin",
     "VeritasClient",
+    "ProtocolService",
+    "ProtocolServiceAsync",
 ]
