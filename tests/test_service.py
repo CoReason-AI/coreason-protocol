@@ -86,6 +86,37 @@ async def test_service_async_lock_validation_error(protocol_definition: Protocol
     await svc.__aexit__(None, None, None)
 
 
+@pytest.mark.asyncio  # type: ignore[misc]
+async def test_service_async_lock_invalid_state(protocol_definition: ProtocolDefinition) -> None:
+    # Set invalid state
+    protocol_definition.status = ProtocolStatus.APPROVED
+
+    svc = ProtocolServiceAsync()
+    with pytest.raises(ValueError, match="Cannot lock a protocol that is already APPROVED or EXECUTED"):
+        await svc.lock_protocol(protocol_definition, "user-1")
+    await svc.__aexit__(None, None, None)
+
+
+@pytest.mark.asyncio  # type: ignore[misc]
+async def test_service_async_lock_http_error(protocol_definition: ProtocolDefinition) -> None:
+    # Mock client to raise HTTPError
+    mock_client = MagicMock(spec=httpx.AsyncClient)
+    mock_client.aclose = MagicMock()
+
+    async def async_post(*args: Any, **kwargs: Any) -> None:
+        raise httpx.HTTPError("Simulated Network Error")
+
+    async def async_aclose() -> None:
+        pass
+
+    mock_client.post = async_post
+    mock_client.aclose = async_aclose
+
+    async with ProtocolServiceAsync(client=mock_client) as svc:
+        with pytest.raises(RuntimeError, match="Failed to register with Veritas"):
+            await svc.lock_protocol(protocol_definition, "user-1")
+
+
 def test_service_sync_lock(protocol_definition: ProtocolDefinition) -> None:
     # Mock client
     mock_client = MagicMock(spec=httpx.AsyncClient)
@@ -175,6 +206,17 @@ def test_service_sync_resource_cleanup() -> None:
         with ProtocolService(client=None):
             pass
         assert aclose_called
+
+
+def test_service_sync_usage_error(protocol_definition: ProtocolDefinition) -> None:
+    """Test that calling methods without 'with' raises RuntimeError."""
+    svc = ProtocolService()
+
+    with pytest.raises(RuntimeError, match="ProtocolService must be used as a context manager"):
+        svc.lock_protocol(protocol_definition, "user-fail")
+
+    with pytest.raises(RuntimeError, match="ProtocolService must be used as a context manager"):
+        svc.compile_protocol(protocol_definition, "PUBMED")
 
 
 @pytest.mark.asyncio  # type: ignore[misc]
