@@ -1,3 +1,4 @@
-loguru>=0.7.2
 boolean-py>=5.0
+loguru>=0.7.2
 pydantic>=2.12.5
+pydantic-core

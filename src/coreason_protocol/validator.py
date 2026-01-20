@@ -1,3 +1,5 @@
+"""Validator logic for ProtocolDefinition."""
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -5,8 +7,8 @@ if TYPE_CHECKING:
 
 
 class ProtocolValidator:
-    """
-    Validator for ProtocolDefinition structural integrity.
+    """Validator for ProtocolDefinition structural integrity.
+
     Ensures P/I/O blocks are present and not empty, and checks term validity.
     """
 
@@ -15,8 +17,7 @@ class ProtocolValidator:
 
     @classmethod
     def validate(cls, protocol: "ProtocolDefinition") -> None:
-        """
-        Validates the protocol structure against PRESS guidelines and internal consistency rules.
+        """Validates the protocol structure against PRESS guidelines and internal consistency rules.
 
         Checks:
         1. Structural Integrity: P, I, O blocks must exist and contain at least one term.

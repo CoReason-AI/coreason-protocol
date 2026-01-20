@@ -283,15 +283,6 @@ class ProtocolDefinition(BaseModel):  # type: ignore[misc]
         if term.origin in (TermOrigin.USER_INPUT, TermOrigin.HUMAN_INJECTION):
             # Blue, Bold
             # Updated to double quotes for style attribute to match test expectations
-            # But wait, test expectations showed: '<b style="color: blue">Adults</b>'
-            # My previous impl: <b style='color: blue; font-weight: bold;'>
-            # I will try to match "color: blue" and maybe "font-weight: bold" if needed.
-            # The test `test_render_html_basic` expects `<b style="color: blue">`.
-            # I should output exactly that if possible, or update tests.
-            # But the PRD asked for "Blue=User". It didn't mandate exact HTML string.
-            # However, the existing tests are strict.
-            # I will use `<b style="color: blue">` for User Input.
-            # What about Human Injection? Test `test_render_human_injection` expects `<b style="color: blue">`.
             style = "color: blue"
             return f'<b style="{style}">{label}</b>'
 

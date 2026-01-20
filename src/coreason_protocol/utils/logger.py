@@ -8,6 +8,8 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_protocol
 
+"""Centralized logger configuration."""
+
 import sys
 from pathlib import Path
 
