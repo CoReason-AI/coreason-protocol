@@ -1,0 +1,75 @@
+# coreason-protocol
+
+The **Design and Governance Engine** for high-stakes research.
+
+## Description
+
+`coreason-protocol` transforms natural language intent into a **Rigorous, Audited, and Executable Search Protocol**. It acts as the "Study Director" or Design Plane, ensuring that research protocols are designed with rigor, validated with logic (PRESS guidelines), and approved with authority before execution.
+
+Unlike simple RAG retrieval, this package enforces a scientific workflow:
+1.  **AI Draft:** Generates PICO blocks and expands terms using ontologies (via `coreason-codex`).
+2.  **Human Governance:** Allows experts to override or inject terms.
+3.  **Strict Validation:** Checks structural integrity and PRESS guidelines.
+4.  **Immutable Registration:** Locks and registers approved protocols (via `coreason-veritas`).
+
+## Installation
+
+```bash
+pip install coreason-protocol
+```
+
+Or using poetry:
+
+```bash
+poetry add coreason-protocol
+```
+
+## Features
+
+*   **PICO Architecture:** Structuring of research intent into Population, Intervention, Comparator, and Outcome.
+*   **Ontology Expansion:** Integration with `coreason-codex` for term hydration (Concept IDs).
+*   **Strategy Compilation:** Translation of PICO models into executable queries for:
+    *   PubMed/Ovid (Boolean strings with MeSH/TiAb mapping).
+    *   LanceDB (Vector embeddings + metadata filters).
+    *   Graph (Cypher queries).
+*   **HITL Governance:** Support for human review with `override_term` and `inject_term` capabilities.
+*   **Audit Fidelity:** Soft-deletion of terms to maintain a complete history of design decisions.
+*   **Multi-Format Rendering:** Export to HTML (visual diff), PRISMA-S text, and JSON-LD.
+
+## Usage
+
+```python
+from coreason_protocol import ProtocolDefinition, PicoBlock, TermOrigin, OntologyTerm
+
+# Initialize a new Protocol Definition
+protocol = ProtocolDefinition(
+    id="prot-123",
+    title="Statins for CVD Prevention",
+    research_question="Do statins reduce CVD risk in elderly patients?",
+    pico_structure={},
+    status="DRAFT"
+)
+
+# Example: Adding a PICO block (programmatically or via AI expansion)
+term = OntologyTerm(
+    id="term-001",
+    label="Statins",
+    vocab_source="MeSH",
+    code="D019821",
+    origin=TermOrigin.USER_INPUT
+)
+
+protocol.pico_structure["I"] = PicoBlock(
+    block_type="I",
+    description="Intervention",
+    terms=[term]
+)
+
+# Render the protocol for review
+html_output = protocol.render(format="html")
+print(html_output)
+```
+
+## Documentation
+
+For detailed product requirements and architectural philosophy, see [Requirements](product_requirements.md).
