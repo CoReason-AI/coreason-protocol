@@ -3,4 +3,4 @@ theme:
   name: material
 nav:
   - Home: index.md
-  - Architecture & Utility: vignette.md
+  - Requirements: product_requirements.md

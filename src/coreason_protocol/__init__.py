@@ -9,7 +9,12 @@
 # Source Code: https://github.com/CoReason-AI/coreason_protocol
 
 """
-coreason-protocol
+coreason-protocol: Design and Governance Engine for high-stakes research.
+
+This package provides the core data structures and logic for defining, validiating,
+and governing systematic review protocols. It implements the PICO architecture,
+integrates with ontologies, and manages the lifecycle of a protocol from draft
+to immutable registration.
 """
 
 __version__ = "0.1.0"
