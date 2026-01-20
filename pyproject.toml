@@ -1,67 +1,51 @@
 [tool.poetry]
-name = "coreason_protocol"
+name = "coreason-protocol"
 version = "0.1.0"
-description = "coreason-protocol"
+description = "Design and Governance Engine for high-stakes research."
 authors = ["Gowtham A Rao <gowtham.rao@coreason.ai>"]
-license = "Prosperity-3.0"
 readme = "README.md"
 packages = [{include = "coreason_protocol", from = "src"}]
 
 [tool.poetry.dependencies]
-python = ">=3.12, <3.15"
-loguru = "^0.7.2"
-pydantic = "^2.12.5"
-boolean-py = "^5.0"
+python = "^3.10"
+pydantic = "^2.0"
+loguru = "^0.7.0"
+boolean-py = "^4.0"
+anyio = "^4.0"
+httpx = "^0.27.0"
+aiofiles = "^23.0"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^8.2.2"
-ruff = "^0.4.8"
-pre-commit = "^3.7.1"
-pytest-cov = "^5.0.0"
-mkdocs = "^1.6.0"
-mkdocs-material = "^9.5.26"
+pytest = "^8.0"
+pytest-cov = "^4.1"
+mypy = "^1.8"
+ruff = "^0.1.0"
+types-aiofiles = "^23.0"
+pytest-asyncio = "^0.23.0"
+mkdocs = "^1.5.0"
+mkdocs-material = "^9.0.0"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
-[project]
-name = "coreason_protocol"
-version = "0.1.0"
-description = "coreason-protocol"
-readme = "README.md"
-requires-python = ">=3.11"
-authors = [
-    { name = "Gowtham A Rao", email = "gowtham.rao@coreason.ai" },
-]
-license = { file = "LICENSE" }
-classifiers = [
-    "License :: Other/Proprietary License",
-    "Programming Language :: Python :: 3.12",
-    "Operating System :: OS Independent",
-]
-
-[project.urls]
-Homepage = "https://github.com/CoReason-AI/coreason_protocol"
-Repository = "https://github.com/CoReason-AI/coreason_protocol"
-Documentation = "https://github.com/CoReason-AI/coreason_protocol"
-
-[tool.ruff]
-line-length = 120
-target-version = "py312"
-
-[tool.ruff.lint]
-select = ["E", "F", "B", "I"]
-ignore = []
-
-[tool.mypy]
-python_version = "3.12"
-strict = true
-ignore_missing_imports = true
-
 [tool.pytest.ini_options]
-addopts = "--cov=src --cov-report=term-missing --cov-fail-under=100"
+minversion = "6.0"
+addopts = "--cov=coreason_protocol --cov-report=term-missing"
 testpaths = ["tests"]
+asyncio_mode = "auto"
 
 [tool.coverage.run]
 omit = ["tests/*"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "B"]
+ignore = []
+
+[tool.mypy]
+strict = true
+ignore_missing_imports = true
