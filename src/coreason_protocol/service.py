@@ -1,7 +1,7 @@
 """Service layer for coreason-protocol."""
 
 from datetime import datetime, timezone
-from typing import Any, List, Optional, TypeVar
+from typing import Any, ContextManager, List, Optional, TypeVar
 
 import anyio
 import httpx
@@ -131,11 +131,12 @@ class ProtocolService:
     ) -> None:
         self._async_service = ProtocolServiceAsync(client=client, veritas_url=veritas_url)
         self._portal: Optional[BlockingPortal] = None
+        self._portal_cm: Optional[ContextManager[BlockingPortal]] = None
 
     def __enter__(self) -> "ProtocolService":
         # Start a persistent event loop in a background thread
-        self._portal = start_blocking_portal()
-        self._portal.__enter__()
+        self._portal_cm = start_blocking_portal()
+        self._portal = self._portal_cm.__enter__()
         # Enter the async context (initialize client)
         self._portal.call(self._async_service.__aenter__)
         return self
@@ -143,9 +144,12 @@ class ProtocolService:
     def __exit__(self, exc_type: Optional[type[BaseException]], exc_val: Optional[BaseException], exc_tb: Any) -> None:
         if self._portal:
             # Exit async service
-            self._portal.call(self._async_service.__aexit__, exc_type, exc_val, exc_tb)
-            # Stop the portal
-            self._portal.__exit__(exc_type, exc_val, exc_tb)
+            try:
+                self._portal.call(self._async_service.__aexit__, exc_type, exc_val, exc_tb)
+            finally:
+                # Stop the portal
+                if self._portal_cm:
+                    self._portal_cm.__exit__(exc_type, exc_val, exc_tb)
 
     def lock_protocol(self, protocol: ProtocolDefinition, user_id: str) -> ProtocolDefinition:
         """Sync wrapper for lock_protocol."""
