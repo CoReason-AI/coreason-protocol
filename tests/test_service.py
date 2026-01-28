@@ -88,7 +88,9 @@ async def test_service_async_lock(protocol_definition: ProtocolDefinition, mock_
 
 
 @pytest.mark.asyncio  # type: ignore[misc]
-async def test_service_async_lock_validation_error(protocol_definition: ProtocolDefinition, mock_context: UserContext) -> None:
+async def test_service_async_lock_validation_error(
+    protocol_definition: ProtocolDefinition, mock_context: UserContext
+) -> None:
     # Invalid protocol
     del protocol_definition.pico_structure["O"]
 
@@ -99,7 +101,9 @@ async def test_service_async_lock_validation_error(protocol_definition: Protocol
 
 
 @pytest.mark.asyncio  # type: ignore[misc]
-async def test_service_async_lock_invalid_state(protocol_definition: ProtocolDefinition, mock_context: UserContext) -> None:
+async def test_service_async_lock_invalid_state(
+    protocol_definition: ProtocolDefinition, mock_context: UserContext
+) -> None:
     # Set invalid state
     protocol_definition.status = ProtocolStatus.APPROVED
 
@@ -110,7 +114,9 @@ async def test_service_async_lock_invalid_state(protocol_definition: ProtocolDef
 
 
 @pytest.mark.asyncio  # type: ignore[misc]
-async def test_service_async_lock_pending_review(protocol_definition: ProtocolDefinition, mock_context: UserContext) -> None:
+async def test_service_async_lock_pending_review(
+    protocol_definition: ProtocolDefinition, mock_context: UserContext
+) -> None:
     # Set pending review state - should raise specific error
     protocol_definition.status = ProtocolStatus.PENDING_REVIEW
 
@@ -121,7 +127,9 @@ async def test_service_async_lock_pending_review(protocol_definition: ProtocolDe
 
 
 @pytest.mark.asyncio  # type: ignore[misc]
-async def test_service_async_lock_response_variants(protocol_definition: ProtocolDefinition, mock_context: UserContext) -> None:
+async def test_service_async_lock_response_variants(
+    protocol_definition: ProtocolDefinition, mock_context: UserContext
+) -> None:
     # Variant 1: Response is a string
     mock_client = MagicMock(spec=httpx.AsyncClient)
     mock_response = MagicMock(spec=httpx.Response)
@@ -153,7 +161,9 @@ async def test_service_async_lock_response_variants(protocol_definition: Protoco
 
 
 @pytest.mark.asyncio  # type: ignore[misc]
-async def test_service_async_lock_http_error(protocol_definition: ProtocolDefinition, mock_context: UserContext) -> None:
+async def test_service_async_lock_http_error(
+    protocol_definition: ProtocolDefinition, mock_context: UserContext
+) -> None:
     # Mock client to raise HTTPError
     mock_client = MagicMock(spec=httpx.AsyncClient)
     mock_client.aclose = MagicMock()

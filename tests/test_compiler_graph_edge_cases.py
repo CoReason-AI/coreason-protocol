@@ -26,7 +26,9 @@ def basic_proto_with_quotes() -> ProtocolDefinition:
     )
 
 
-def test_compile_graph_injection_prevention(basic_proto_with_quotes: ProtocolDefinition, test_context: UserContext) -> None:
+def test_compile_graph_injection_prevention(
+    basic_proto_with_quotes: ProtocolDefinition, test_context: UserContext
+) -> None:
     compiler = StrategyCompiler()
     strategy = compiler.compile(basic_proto_with_quotes, context=test_context, target="GRAPH")
 

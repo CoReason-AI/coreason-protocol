@@ -12,38 +12,23 @@ import json
 from unittest.mock import MagicMock, patch
 
 import pytest
-from coreason_protocol.main import main, compile_command, validate_command, run_command
-from coreason_protocol.types import ProtocolDefinition
+
+from coreason_protocol.main import main
 
 
 @pytest.fixture  # type: ignore[misc]
-def protocol_file(tmp_path):  # type: ignore[no-untyped-def]
-    p = tmp_path / "protocol.json"
+def protocol_file(tmp_path: object) -> str:
+    p = tmp_path / "protocol.json"  # type: ignore
     data = {
         "id": "proto-1",
         "title": "Test Protocol",
         "research_question": "Test Question",
         "pico_structure": {
-            "P": {
-                "block_type": "P",
-                "description": "Patients",
-                "terms": [],
-                "logic_operator": "OR"
-            },
-            "I": {
-                "block_type": "I",
-                "description": "Intervention",
-                "terms": [],
-                "logic_operator": "OR"
-            },
-             "O": {
-                "block_type": "O",
-                "description": "Outcome",
-                "terms": [],
-                "logic_operator": "OR"
-            }
+            "P": {"block_type": "P", "description": "Patients", "terms": [], "logic_operator": "OR"},
+            "I": {"block_type": "I", "description": "Intervention", "terms": [], "logic_operator": "OR"},
+            "O": {"block_type": "O", "description": "Outcome", "terms": [], "logic_operator": "OR"},
         },
-        "status": "DRAFT"
+        "status": "DRAFT",
     }
     p.write_text(json.dumps(data))
     return str(p)
@@ -61,11 +46,9 @@ def test_main_help(capsys):  # type: ignore[no-untyped-def]
 def test_compile_command(protocol_file, capsys):  # type: ignore[no-untyped-def]
     with patch("sys.argv", ["main.py", "compile", protocol_file]):
         # Mock Service to avoid real execution logic dependencies or I/O
-        with patch("coreason_protocol.main.ProtocolService") as MockService:
-            mock_instance = MockService.return_value.__enter__.return_value
-            mock_instance.compile_protocol.return_value = [
-                MagicMock(target="PUBMED", query_string="QUERY")
-            ]
+        with patch("coreason_protocol.main.ProtocolService") as mock_protocol_service:
+            mock_instance = mock_protocol_service.return_value.__enter__.return_value
+            mock_instance.compile_protocol.return_value = [MagicMock(target="PUBMED", query_string="QUERY")]
 
             main()
 
@@ -78,9 +61,9 @@ def test_compile_command(protocol_file, capsys):  # type: ignore[no-untyped-def]
 
 def test_validate_command(protocol_file):  # type: ignore[no-untyped-def]
     with patch("sys.argv", ["main.py", "validate", protocol_file]):
-        with patch("coreason_protocol.main.ProtocolValidator") as MockValidator:
-             main()
-             MockValidator.validate.assert_called()
+        with patch("coreason_protocol.main.ProtocolValidator") as mock_validator:
+            main()
+            mock_validator.validate.assert_called()
 
 
 def test_run_command(protocol_file, capsys):  # type: ignore[no-untyped-def]

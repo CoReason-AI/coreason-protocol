@@ -11,12 +11,11 @@
 import argparse
 import json
 import sys
-from pathlib import Path
 from typing import Optional
 
 from coreason_identity.models import UserContext
 
-from coreason_protocol import __author__, __version__, ProtocolDefinition, ProtocolService
+from coreason_protocol import ProtocolDefinition, ProtocolService, __author__, __version__
 from coreason_protocol.utils.logger import logger
 from coreason_protocol.validator import ProtocolValidator
 
@@ -37,7 +36,11 @@ def load_protocol(path: str) -> Optional[ProtocolDefinition]:
     try:
         with open(path, "r") as f:
             data = json.load(f)
-        return ProtocolDefinition.model_validate(data)
+        proto = ProtocolDefinition.model_validate(data)
+        # Ensure correct type is returned for mypy
+        if isinstance(proto, ProtocolDefinition):
+            return proto
+        return None  # Should not happen if validation succeeds
     except Exception as e:
         logger.error(f"Failed to load protocol from {path}: {e}")
         return None

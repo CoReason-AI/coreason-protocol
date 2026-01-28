@@ -1,4 +1,5 @@
 from coreason_identity.models import UserContext
+
 from coreason_protocol.types import (
     OntologyTerm,
     PicoBlock,
