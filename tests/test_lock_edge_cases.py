@@ -11,6 +11,7 @@
 from unittest.mock import MagicMock
 
 import pytest
+from coreason_identity.models import UserContext
 from pydantic import ValidationError
 
 from coreason_protocol.interfaces import VeritasClient
@@ -48,24 +49,24 @@ def complex_protocol() -> ProtocolDefinition:
     )
 
 
-def test_lock_veritas_failure(complex_protocol: ProtocolDefinition) -> None:
+def test_lock_veritas_failure(complex_protocol: ProtocolDefinition, test_context: UserContext) -> None:
     """Test that if VeritasClient fails, the protocol remains in DRAFT."""
     mock_veritas = MagicMock(spec=VeritasClient)
     mock_veritas.register_protocol.side_effect = Exception("Veritas Service Down")
 
     with pytest.raises(Exception, match="Veritas Service Down"):
-        complex_protocol.lock("user-1", mock_veritas)
+        complex_protocol.lock(test_context, mock_veritas)
 
     assert complex_protocol.status == ProtocolStatus.DRAFT
     assert complex_protocol.approval_history is None
 
 
-def test_lock_complex_payload(complex_protocol: ProtocolDefinition) -> None:
+def test_lock_complex_payload(complex_protocol: ProtocolDefinition, test_context: UserContext) -> None:
     """Test locking a complex protocol structure."""
     mock_veritas = MagicMock(spec=VeritasClient)
     mock_veritas.register_protocol.return_value = "hash-complex"
 
-    complex_protocol.lock("user-1", mock_veritas)
+    complex_protocol.lock(test_context, mock_veritas)
 
     assert complex_protocol.status == ProtocolStatus.APPROVED
     assert complex_protocol.approval_history is not None
@@ -79,13 +80,13 @@ def test_lock_complex_payload(complex_protocol: ProtocolDefinition) -> None:
     assert len(call_args["pico_structure"]["P"]["terms"]) == 2
 
 
-def test_lock_invalid_hash(complex_protocol: ProtocolDefinition) -> None:
+def test_lock_invalid_hash(complex_protocol: ProtocolDefinition, test_context: UserContext) -> None:
     """Test that locking fails if Veritas returns an empty hash."""
     mock_veritas = MagicMock(spec=VeritasClient)
     mock_veritas.register_protocol.return_value = "   "  # Empty/whitespace
 
     with pytest.raises(ValidationError, match="veritas_hash cannot be empty"):
-        complex_protocol.lock("user-1", mock_veritas)
+        complex_protocol.lock(test_context, mock_veritas)
 
     # Should remain in DRAFT if validation fails during assignment
     # Note: validation happens when assigning to approval_history.

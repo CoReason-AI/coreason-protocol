@@ -1,6 +1,7 @@
 import json
 
 import pytest
+from coreason_identity.models import UserContext
 
 from coreason_protocol.compiler import StrategyCompiler
 from coreason_protocol.types import (
@@ -33,14 +34,14 @@ def complex_protocol() -> ProtocolDefinition:
     )
 
 
-def test_lancedb_ignores_complex_pico(complex_protocol: ProtocolDefinition) -> None:
+def test_lancedb_ignores_complex_pico(complex_protocol: ProtocolDefinition, test_context: UserContext) -> None:
     """
     Verify that the compiler ignores PICO structure and only uses research_question.
     This ensures that the 'filter' field remains empty as per current requirements,
     regardless of how rich the PICO data is.
     """
     compiler = StrategyCompiler()
-    strategy = compiler.compile(complex_protocol, target="LANCEDB")
+    strategy = compiler.compile(complex_protocol, context=test_context, target="LANCEDB")
 
     data = json.loads(strategy.query_string)
 
@@ -55,7 +56,7 @@ def test_lancedb_ignores_complex_pico(complex_protocol: ProtocolDefinition) -> N
     assert "D000" not in data["vector"]
 
 
-def test_lancedb_unicode_and_injection() -> None:
+def test_lancedb_unicode_and_injection(test_context: UserContext) -> None:
     """
     Test robust JSON handling for:
     1. JSON Injection attempts (quotes, braces)
@@ -77,7 +78,7 @@ def test_lancedb_unicode_and_injection() -> None:
     )
 
     compiler = StrategyCompiler()
-    strategy = compiler.compile(proto, target="LANCEDB")
+    strategy = compiler.compile(proto, context=test_context, target="LANCEDB")
 
     data = json.loads(strategy.query_string)
 
@@ -90,7 +91,7 @@ def test_lancedb_unicode_and_injection() -> None:
     assert "ignore" not in data
 
 
-def test_lancedb_massive_input() -> None:
+def test_lancedb_massive_input(test_context: UserContext) -> None:
     """
     Test handling of a very large research question (10KB).
     Ensures no serialization crashes or truncation.
@@ -106,7 +107,7 @@ def test_lancedb_massive_input() -> None:
     )
 
     compiler = StrategyCompiler()
-    strategy = compiler.compile(proto, target="LANCEDB")
+    strategy = compiler.compile(proto, context=test_context, target="LANCEDB")
 
     data = json.loads(strategy.query_string)
 

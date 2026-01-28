@@ -6,7 +6,9 @@ from typing import Any, ContextManager, List, Optional, TypeVar
 import anyio
 import httpx
 from anyio.from_thread import BlockingPortal, start_blocking_portal
+from coreason_identity.models import UserContext
 
+from coreason_protocol.utils.logger import logger
 from .types import ApprovalRecord, ExecutableStrategy, ProtocolDefinition, ProtocolStatus
 from .validator import ProtocolValidator
 
@@ -42,17 +44,26 @@ class ProtocolServiceAsync:
         if self._internal_client:
             await self._client.aclose()
 
-    async def lock_protocol(self, protocol: ProtocolDefinition, user_id: str) -> ProtocolDefinition:
+    async def lock_protocol(self, protocol: ProtocolDefinition, context: UserContext) -> ProtocolDefinition:
         """
         Finalizes the protocol and registers with Veritas (Async).
 
         Args:
             protocol: The protocol to lock.
-            user_id: The ID of the user approving the protocol.
+            context: User identity context.
 
         Returns:
             The updated ProtocolDefinition.
         """
+        if context is None:
+            raise ValueError("context cannot be None")
+
+        logger.info(
+            "Locking protocol",
+            user_id=context.user_id,
+            protocol_id=str(protocol.id),
+        )
+
         # 1. State Validation
         if protocol.status in (ProtocolStatus.APPROVED, ProtocolStatus.EXECUTED):
             raise ValueError("Cannot lock a protocol that is already APPROVED or EXECUTED")
@@ -93,27 +104,40 @@ class ProtocolServiceAsync:
 
         # 4. Update Protocol
         protocol.approval_history = ApprovalRecord(
-            approver_id=user_id, timestamp=datetime.now(timezone.utc), veritas_hash=protocol_hash
+            approver_id=context.user_id,
+            timestamp=datetime.now(timezone.utc),
+            veritas_hash=protocol_hash,
         )
         protocol.status = ProtocolStatus.APPROVED
 
         return protocol
 
-    async def compile_protocol(self, protocol: ProtocolDefinition, target: str) -> List[ExecutableStrategy]:
+    async def compile_protocol(
+        self, protocol: ProtocolDefinition, target: str, context: UserContext
+    ) -> List[ExecutableStrategy]:
         """
         Compiles the protocol into executable search strategies (Async Wrapper).
 
         Args:
             protocol: The protocol to compile.
             target: The target execution engine.
+            context: User identity context.
 
         Returns:
             List of ExecutableStrategy.
         """
+        if context is None:
+            raise ValueError("context cannot be None")
+
+        logger.info(
+            "Compiling protocol",
+            user_id=context.user_id,
+            protocol_id=str(protocol.id),
+        )
 
         # Wrap CPU-heavy compilation
         def _compile_sync() -> List[ExecutableStrategy]:
-            return protocol.compile(target=target)
+            return protocol.compile(context=context, target=target)
 
         # anyio.to_thread.run_sync returns the result of the function, which is List[ExecutableStrategy]
         # Mypy might be confused because run_sync is generic.
@@ -151,14 +175,16 @@ class ProtocolService:
                 if self._portal_cm:
                     self._portal_cm.__exit__(exc_type, exc_val, exc_tb)
 
-    def lock_protocol(self, protocol: ProtocolDefinition, user_id: str) -> ProtocolDefinition:
+    def lock_protocol(self, protocol: ProtocolDefinition, context: UserContext) -> ProtocolDefinition:
         """Sync wrapper for lock_protocol."""
         if not self._portal:
             raise RuntimeError("ProtocolService must be used as a context manager (with ... as ...)")
-        return self._portal.call(self._async_service.lock_protocol, protocol, user_id)  # type: ignore[no-any-return]
+        return self._portal.call(self._async_service.lock_protocol, protocol, context)  # type: ignore[no-any-return]
 
-    def compile_protocol(self, protocol: ProtocolDefinition, target: str) -> List[ExecutableStrategy]:
+    def compile_protocol(
+        self, protocol: ProtocolDefinition, target: str, context: UserContext
+    ) -> List[ExecutableStrategy]:
         """Sync wrapper for compile_protocol."""
         if not self._portal:
             raise RuntimeError("ProtocolService must be used as a context manager (with ... as ...)")
-        return self._portal.call(self._async_service.compile_protocol, protocol, target)  # type: ignore[no-any-return]
+        return self._portal.call(self._async_service.compile_protocol, protocol, target, context)  # type: ignore[no-any-return]
