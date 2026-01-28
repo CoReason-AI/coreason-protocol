@@ -54,6 +54,7 @@ def test_main_help(capsys):  # type: ignore[no-untyped-def]
         with pytest.raises(SystemExit):
             main()
     captured = capsys.readouterr()
+    assert "coreason-protocol v0.2.0" in captured.out
     assert "usage:" in captured.out
 
 

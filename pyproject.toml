@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "coreason-protocol"
-version = "0.1.0"
+version = "0.2.0"
 description = "Design and Governance Engine for high-stakes research."
 authors = ["Gowtham A Rao <gowtham.rao@coreason.ai>"]
 readme = "README.md"
