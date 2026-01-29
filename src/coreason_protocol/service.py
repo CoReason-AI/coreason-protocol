@@ -180,9 +180,7 @@ class ProtocolService:
         """Sync wrapper for lock_protocol."""
         if not self._portal:
             raise RuntimeError("ProtocolService must be used as a context manager (with ... as ...)")
-        return cast(
-            ProtocolDefinition, self._portal.call(self._async_service.lock_protocol, protocol, context)
-        )
+        return cast(ProtocolDefinition, self._portal.call(self._async_service.lock_protocol, protocol, context))
 
     def compile_protocol(
         self, protocol: ProtocolDefinition, target: str, context: UserContext

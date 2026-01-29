@@ -10,8 +10,8 @@
 
 import json
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 from typing import Any
+from unittest.mock import MagicMock, patch
 
 import pytest
 
