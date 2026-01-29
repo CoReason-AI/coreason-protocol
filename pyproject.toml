@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "coreason-protocol"
-version = "0.2.1"
+version = "0.3.0"
 description = "Design and Governance Engine for high-stakes research."
 authors = ["Gowtham A Rao <gowtham.rao@coreason.ai>"]
 readme = "README.md"
@@ -15,6 +15,8 @@ anyio = "^4.12.1"
 httpx = "^0.28.1"
 aiofiles = "^25.1.0"
 coreason-identity = "^0.4.2"
+fastapi = "*"
+uvicorn = {extras = ["standard"], version = "*"}
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^9.0.2"
