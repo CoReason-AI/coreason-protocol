@@ -1,6 +1,7 @@
 import json
 
 import pytest
+from coreason_identity.models import UserContext
 
 from coreason_protocol.compiler import StrategyCompiler
 from coreason_protocol.types import ProtocolDefinition, ProtocolStatus
@@ -17,9 +18,9 @@ def basic_protocol_lancedb() -> ProtocolDefinition:
     )
 
 
-def test_compile_lancedb_basic(basic_protocol_lancedb: ProtocolDefinition) -> None:
+def test_compile_lancedb_basic(basic_protocol_lancedb: ProtocolDefinition, test_context: UserContext) -> None:
     compiler = StrategyCompiler()
-    strategy = compiler.compile(basic_protocol_lancedb, target="LANCEDB")
+    strategy = compiler.compile(basic_protocol_lancedb, context=test_context, target="LANCEDB")
 
     assert strategy.target == "LANCEDB"
     assert strategy.validation_status == "PRESS_PASSED"
@@ -30,7 +31,7 @@ def test_compile_lancedb_basic(basic_protocol_lancedb: ProtocolDefinition) -> No
     assert data["filter"] == ""
 
 
-def test_compile_lancedb_special_chars() -> None:
+def test_compile_lancedb_special_chars(test_context: UserContext) -> None:
     # Test with characters that need JSON escaping
     rq = 'Search "query" with \n newlines and \\ backslashes.'
     proto = ProtocolDefinition(
@@ -42,14 +43,14 @@ def test_compile_lancedb_special_chars() -> None:
     )
 
     compiler = StrategyCompiler()
-    strategy = compiler.compile(proto, target="LANCEDB")
+    strategy = compiler.compile(proto, context=test_context, target="LANCEDB")
 
     data = json.loads(strategy.query_string)
     assert data["vector"] == rq
     assert data["filter"] == ""
 
 
-def test_compile_lancedb_empty_rq() -> None:
+def test_compile_lancedb_empty_rq(test_context: UserContext) -> None:
     proto = ProtocolDefinition(
         id="proto-empty",
         title="Empty RQ",
@@ -59,7 +60,7 @@ def test_compile_lancedb_empty_rq() -> None:
     )
 
     compiler = StrategyCompiler()
-    strategy = compiler.compile(proto, target="LANCEDB")
+    strategy = compiler.compile(proto, context=test_context, target="LANCEDB")
 
     data = json.loads(strategy.query_string)
     assert data["vector"] == ""

@@ -12,6 +12,7 @@ from datetime import timezone
 from unittest.mock import MagicMock
 
 import pytest
+from coreason_identity.models import UserContext
 
 from coreason_protocol.interfaces import VeritasClient
 from coreason_protocol.types import (
@@ -21,6 +22,17 @@ from coreason_protocol.types import (
     ProtocolStatus,
     TermOrigin,
 )
+
+
+@pytest.fixture  # type: ignore[misc]
+def mock_context() -> UserContext:
+    return UserContext(
+        user_id="user-1",
+        email="test@coreason.ai",
+        groups=["researcher"],
+        scopes=["*"],
+        claims={},
+    )
 
 
 @pytest.fixture  # type: ignore[misc]
@@ -62,17 +74,16 @@ def protocol_definition(valid_pico_structure: dict[str, PicoBlock]) -> ProtocolD
     )
 
 
-def test_lock_happy_path(protocol_definition: ProtocolDefinition) -> None:
+def test_lock_happy_path(protocol_definition: ProtocolDefinition, mock_context: UserContext) -> None:
     """Test successful transition from DRAFT to APPROVED."""
     veritas_mock = MagicMock(spec=VeritasClient)
     veritas_mock.register_protocol.return_value = "hash-123"
-    user_id = "user-1"
 
-    protocol_definition.lock(user_id=user_id, veritas_client=veritas_mock)
+    protocol_definition.lock(context=mock_context, veritas_client=veritas_mock)
 
     assert protocol_definition.status == ProtocolStatus.APPROVED
     assert protocol_definition.approval_history is not None
-    assert protocol_definition.approval_history.approver_id == user_id
+    assert protocol_definition.approval_history.approver_id == "user-1"
     assert protocol_definition.approval_history.veritas_hash == "hash-123"
     assert protocol_definition.approval_history.timestamp.tzinfo == timezone.utc
 
@@ -80,33 +91,27 @@ def test_lock_happy_path(protocol_definition: ProtocolDefinition) -> None:
     veritas_mock.register_protocol.assert_called_once()
 
 
-def test_lock_already_approved(protocol_definition: ProtocolDefinition) -> None:
+def test_lock_already_approved(protocol_definition: ProtocolDefinition, mock_context: UserContext) -> None:
     """Test locking an already approved protocol raises ValueError."""
     veritas_mock = MagicMock(spec=VeritasClient)
     veritas_mock.register_protocol.return_value = "hash-123"
     protocol_definition.status = ProtocolStatus.APPROVED
 
     with pytest.raises(ValueError, match="Cannot lock a protocol that is already APPROVED or EXECUTED"):
-        protocol_definition.lock(user_id="user-1", veritas_client=veritas_mock)
+        protocol_definition.lock(context=mock_context, veritas_client=veritas_mock)
 
 
-def test_lock_executed(protocol_definition: ProtocolDefinition) -> None:
+def test_lock_executed(protocol_definition: ProtocolDefinition, mock_context: UserContext) -> None:
     """Test locking an executed protocol raises ValueError."""
     veritas_mock = MagicMock(spec=VeritasClient)
     protocol_definition.status = ProtocolStatus.EXECUTED
 
     with pytest.raises(ValueError, match="Cannot lock a protocol that is already APPROVED or EXECUTED"):
-        protocol_definition.lock(user_id="user-1", veritas_client=veritas_mock)
+        protocol_definition.lock(context=mock_context, veritas_client=veritas_mock)
 
 
-def test_lock_empty_pico_structure() -> None:
+def test_lock_empty_pico_structure(mock_context: UserContext) -> None:
     """Test locking a protocol with empty pico structure raises ValueError."""
-    # We need to bypass validation to create an empty structure initially,
-    # or create a protocol that becomes empty.
-    # Actually ProtocolDefinition validation happens on init.
-    # But we can pass an empty dict if the field allows it.
-    # The current validation only checks key mismatch. It doesn't check for empty dict.
-
     empty_proto = ProtocolDefinition(
         id="proto-empty",
         title="Empty Protocol",
@@ -116,25 +121,20 @@ def test_lock_empty_pico_structure() -> None:
 
     veritas_mock = MagicMock(spec=VeritasClient)
 
-    # Note: Redundant check removed from types.py.
-    # ProtocolValidator now handles this, raising "Missing required block: '...'"
-    # Since set iteration order is not guaranteed, it might miss 'P', 'I', or 'O' first.
-    # We check for general match.
-
     with pytest.raises(ValueError, match="Missing required block:"):
-        empty_proto.lock(user_id="user-1", veritas_client=veritas_mock)
+        empty_proto.lock(context=mock_context, veritas_client=veritas_mock)
 
 
-def test_lock_returns_self(protocol_definition: ProtocolDefinition) -> None:
+def test_lock_returns_self(protocol_definition: ProtocolDefinition, mock_context: UserContext) -> None:
     """Test that lock returns the instance itself (fluent interface)."""
     veritas_mock = MagicMock(spec=VeritasClient)
     veritas_mock.register_protocol.return_value = "hash-123"
 
-    result = protocol_definition.lock(user_id="user-1", veritas_client=veritas_mock)
+    result = protocol_definition.lock(context=mock_context, veritas_client=veritas_mock)
     assert result is protocol_definition
 
 
-def test_lock_fails_validation(protocol_definition: ProtocolDefinition) -> None:
+def test_lock_fails_validation(protocol_definition: ProtocolDefinition, mock_context: UserContext) -> None:
     """Test that lock raises ValueError if structural validation fails."""
     # Remove 'O' block to cause validation failure
     del protocol_definition.pico_structure["O"]
@@ -142,4 +142,4 @@ def test_lock_fails_validation(protocol_definition: ProtocolDefinition) -> None:
     veritas_mock = MagicMock(spec=VeritasClient)
 
     with pytest.raises(ValueError, match="Missing required block: 'O'"):
-        protocol_definition.lock(user_id="user-1", veritas_client=veritas_mock)
+        protocol_definition.lock(context=mock_context, veritas_client=veritas_mock)

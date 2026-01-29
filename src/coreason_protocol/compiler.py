@@ -4,6 +4,7 @@ import json
 from typing import Dict, Iterator, List, Protocol, Tuple
 
 import boolean
+from coreason_identity.models import UserContext
 
 from coreason_protocol.types import (
     ExecutableStrategy,
@@ -270,11 +271,14 @@ class StrategyCompiler:
             Target.GRAPH.value: GraphCompiler(),
         }
 
-    def compile(self, protocol: ProtocolDefinition, target: str = Target.PUBMED.value) -> ExecutableStrategy:
+    def compile(
+        self, protocol: ProtocolDefinition, context: UserContext, target: str = Target.PUBMED.value
+    ) -> ExecutableStrategy:
         """Compiles the protocol for a specific target.
 
         Args:
             protocol: The protocol to compile.
+            context: User identity context.
             target: The target execution engine (default: "PUBMED").
 
         Returns:
@@ -283,6 +287,7 @@ class StrategyCompiler:
         Raises:
             ValueError: If the target is not supported.
         """
+        logger.debug("Compiler started", user_id=context.user_id)
         logger.debug(f"Compiling protocol {protocol.id} for target {target}")
 
         compiler = self._compilers.get(target)

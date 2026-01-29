@@ -1,4 +1,5 @@
 import pytest
+from coreason_identity.models import UserContext
 
 from coreason_protocol.compiler import StrategyCompiler
 from coreason_protocol.types import (
@@ -59,9 +60,9 @@ def basic_protocol() -> ProtocolDefinition:
     )
 
 
-def test_compile_graph_basic(basic_protocol: ProtocolDefinition) -> None:
+def test_compile_graph_basic(basic_protocol: ProtocolDefinition, test_context: UserContext) -> None:
     compiler = StrategyCompiler()
-    strategy = compiler.compile(basic_protocol, target="GRAPH")
+    strategy = compiler.compile(basic_protocol, context=test_context, target="GRAPH")
 
     assert strategy.target == "GRAPH"
     assert strategy.validation_status == "PRESS_PASSED"
@@ -81,12 +82,12 @@ def test_compile_graph_basic(basic_protocol: ProtocolDefinition) -> None:
     assert qs.endswith(expected_end)
 
 
-def test_compile_graph_single_block(basic_protocol: ProtocolDefinition) -> None:
+def test_compile_graph_single_block(basic_protocol: ProtocolDefinition, test_context: UserContext) -> None:
     # Remove I block
     del basic_protocol.pico_structure["I"]
 
     compiler = StrategyCompiler()
-    strategy = compiler.compile(basic_protocol, target="GRAPH")
+    strategy = compiler.compile(basic_protocol, context=test_context, target="GRAPH")
 
     qs = strategy.query_string
     # Should not have WITH p ...
@@ -95,12 +96,12 @@ def test_compile_graph_single_block(basic_protocol: ProtocolDefinition) -> None:
     assert qs.endswith("RETURN p")
 
 
-def test_compile_graph_inactive_terms(basic_protocol: ProtocolDefinition) -> None:
+def test_compile_graph_inactive_terms(basic_protocol: ProtocolDefinition, test_context: UserContext) -> None:
     # Set one P term to inactive
     basic_protocol.pico_structure["P"].terms[1].is_active = False  # Myocardial Infarction (I21)
 
     compiler = StrategyCompiler()
-    strategy = compiler.compile(basic_protocol, target="GRAPH")
+    strategy = compiler.compile(basic_protocol, context=test_context, target="GRAPH")
 
     qs = strategy.query_string
     # Should only contain D009203 in the first list
@@ -108,12 +109,12 @@ def test_compile_graph_inactive_terms(basic_protocol: ProtocolDefinition) -> Non
     assert "I21" not in qs
 
 
-def test_compile_graph_empty_block(basic_protocol: ProtocolDefinition) -> None:
+def test_compile_graph_empty_block(basic_protocol: ProtocolDefinition, test_context: UserContext) -> None:
     # Add empty C block
     basic_protocol.pico_structure["C"] = PicoBlock(block_type="C", description="Comparator", terms=[])
 
     compiler = StrategyCompiler()
-    strategy = compiler.compile(basic_protocol, target="GRAPH")
+    strategy = compiler.compile(basic_protocol, context=test_context, target="GRAPH")
 
     qs = strategy.query_string
     # C block should be ignored
@@ -122,13 +123,13 @@ def test_compile_graph_empty_block(basic_protocol: ProtocolDefinition) -> None:
     assert qs.count("WITH p") == 1
 
 
-def test_compile_graph_no_active_terms(basic_protocol: ProtocolDefinition) -> None:
+def test_compile_graph_no_active_terms(basic_protocol: ProtocolDefinition, test_context: UserContext) -> None:
     # Deactivate all
     for block in basic_protocol.pico_structure.values():
         for term in block.terms:
             term.is_active = False
 
     compiler = StrategyCompiler()
-    strategy = compiler.compile(basic_protocol, target="GRAPH")
+    strategy = compiler.compile(basic_protocol, context=test_context, target="GRAPH")
 
     assert strategy.query_string == ""
