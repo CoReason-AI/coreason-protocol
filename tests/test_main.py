@@ -90,6 +90,18 @@ def test_validate_command_load_failure(capsys):  # type: ignore[no-untyped-def]
     # load_protocol returns None, validate_command checks if not protocol -> sys.exit(1)
 
 
+def test_load_protocol_invalid_type(protocol_file):  # type: ignore[no-untyped-def]
+    """Covers the case where model_validate returns unexpected type."""
+    with patch("sys.argv", ["main.py", "compile", protocol_file]):
+        with patch("coreason_protocol.types.ProtocolDefinition.model_validate") as mock_validate:
+            # Return something that is NOT ProtocolDefinition
+            mock_validate.return_value = "Not a Protocol"
+
+            # Since load_protocol will return None, compile_command will exit
+            with pytest.raises(SystemExit):
+                main()
+
+
 def test_compile_exception(protocol_file):  # type: ignore[no-untyped-def]
     with patch("sys.argv", ["main.py", "compile", protocol_file]):
         with patch("coreason_protocol.main.ProtocolService") as mock_service:
