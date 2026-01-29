@@ -21,7 +21,7 @@ from coreason_protocol.types import (
 from coreason_protocol.validator import ProtocolValidator
 
 
-@pytest.fixture  # type: ignore[misc]
+@pytest.fixture
 def base_term() -> OntologyTerm:
     return OntologyTerm(
         id="term-1",
@@ -32,7 +32,7 @@ def base_term() -> OntologyTerm:
     )
 
 
-@pytest.fixture  # type: ignore[misc]
+@pytest.fixture
 def kitchen_sink_structure() -> Dict[str, PicoBlock]:
     """
     Creates a complex PICO structure with P, I, C, O, S blocks,

@@ -9,7 +9,7 @@ from coreason_protocol.service import ProtocolService, ProtocolServiceAsync
 from coreason_protocol.types import OntologyTerm, PicoBlock, ProtocolDefinition, ProtocolStatus, TermOrigin
 
 
-@pytest.fixture  # type: ignore[misc]
+@pytest.fixture
 def valid_pico_structure() -> dict[str, PicoBlock]:
     term = OntologyTerm(
         id="term-1",
@@ -37,7 +37,7 @@ def valid_pico_structure() -> dict[str, PicoBlock]:
     }
 
 
-@pytest.fixture  # type: ignore[misc]
+@pytest.fixture
 def protocol_definition(valid_pico_structure: dict[str, PicoBlock]) -> ProtocolDefinition:
     return ProtocolDefinition(
         id="proto-1",
@@ -47,7 +47,7 @@ def protocol_definition(valid_pico_structure: dict[str, PicoBlock]) -> ProtocolD
     )
 
 
-@pytest.fixture  # type: ignore[misc]
+@pytest.fixture
 def mock_context() -> UserContext:
     return UserContext(
         user_id="user-1",
@@ -58,7 +58,7 @@ def mock_context() -> UserContext:
     )
 
 
-@pytest.mark.asyncio  # type: ignore[misc]
+@pytest.mark.asyncio
 async def test_service_async_lock(protocol_definition: ProtocolDefinition, mock_context: UserContext) -> None:
     # Mock the internal client
     mock_client = MagicMock(spec=httpx.AsyncClient)
@@ -87,7 +87,7 @@ async def test_service_async_lock(protocol_definition: ProtocolDefinition, mock_
     assert result.approval_history.approver_id == "user-1"
 
 
-@pytest.mark.asyncio  # type: ignore[misc]
+@pytest.mark.asyncio
 async def test_service_async_lock_validation_error(
     protocol_definition: ProtocolDefinition, mock_context: UserContext
 ) -> None:
@@ -100,7 +100,7 @@ async def test_service_async_lock_validation_error(
     await svc.__aexit__(None, None, None)
 
 
-@pytest.mark.asyncio  # type: ignore[misc]
+@pytest.mark.asyncio
 async def test_service_async_lock_invalid_state(
     protocol_definition: ProtocolDefinition, mock_context: UserContext
 ) -> None:
@@ -113,7 +113,7 @@ async def test_service_async_lock_invalid_state(
     await svc.__aexit__(None, None, None)
 
 
-@pytest.mark.asyncio  # type: ignore[misc]
+@pytest.mark.asyncio
 async def test_service_async_lock_pending_review(
     protocol_definition: ProtocolDefinition, mock_context: UserContext
 ) -> None:
@@ -126,7 +126,7 @@ async def test_service_async_lock_pending_review(
     await svc.__aexit__(None, None, None)
 
 
-@pytest.mark.asyncio  # type: ignore[misc]
+@pytest.mark.asyncio
 async def test_service_async_lock_response_variants(
     protocol_definition: ProtocolDefinition, mock_context: UserContext
 ) -> None:
@@ -160,7 +160,7 @@ async def test_service_async_lock_response_variants(
         assert result.approval_history.veritas_hash == "{'other': 'value'}"
 
 
-@pytest.mark.asyncio  # type: ignore[misc]
+@pytest.mark.asyncio
 async def test_service_async_lock_http_error(
     protocol_definition: ProtocolDefinition, mock_context: UserContext
 ) -> None:
@@ -284,7 +284,7 @@ def test_service_sync_usage_error(protocol_definition: ProtocolDefinition, mock_
         svc.compile_protocol(protocol_definition, "PUBMED", mock_context)
 
 
-@pytest.mark.asyncio  # type: ignore[misc]
+@pytest.mark.asyncio
 async def test_service_async_compile(protocol_definition: ProtocolDefinition, mock_context: UserContext) -> None:
     async with ProtocolServiceAsync() as svc:
         strategies = await svc.compile_protocol(protocol_definition, "PUBMED", mock_context)
@@ -306,7 +306,7 @@ def test_service_sync_compile(protocol_definition: ProtocolDefinition, mock_cont
     assert strategies[0].target == "PUBMED"
 
 
-@pytest.mark.asyncio  # type: ignore[misc]
+@pytest.mark.asyncio
 async def test_service_async_context_none(protocol_definition: ProtocolDefinition) -> None:
     svc = ProtocolServiceAsync()
     # Cast None to UserContext for type checking simulation of invalid input

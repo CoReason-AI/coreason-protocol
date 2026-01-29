@@ -24,7 +24,7 @@ from coreason_protocol.types import (
 )
 
 
-@pytest.fixture  # type: ignore[misc]
+@pytest.fixture
 def mock_context() -> UserContext:
     return UserContext(
         user_id="user-1",
@@ -35,7 +35,7 @@ def mock_context() -> UserContext:
     )
 
 
-@pytest.fixture  # type: ignore[misc]
+@pytest.fixture
 def valid_pico_structure() -> dict[str, PicoBlock]:
     term = OntologyTerm(
         id="term-1",
@@ -64,7 +64,7 @@ def valid_pico_structure() -> dict[str, PicoBlock]:
     }
 
 
-@pytest.fixture  # type: ignore[misc]
+@pytest.fixture
 def protocol_definition(valid_pico_structure: dict[str, PicoBlock]) -> ProtocolDefinition:
     return ProtocolDefinition(
         id="proto-1",

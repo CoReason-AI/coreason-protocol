@@ -1,7 +1,7 @@
 """Service layer for coreason-protocol."""
 
 from datetime import datetime, timezone
-from typing import Any, ContextManager, List, Optional, TypeVar
+from typing import Any, ContextManager, List, Optional, TypeVar, cast
 
 import anyio
 import httpx
@@ -142,7 +142,7 @@ class ProtocolServiceAsync:
 
         # anyio.to_thread.run_sync returns the result of the function, which is List[ExecutableStrategy]
         # Mypy might be confused because run_sync is generic.
-        return await anyio.to_thread.run_sync(_compile_sync)  # type: ignore[no-any-return]
+        return await anyio.to_thread.run_sync(_compile_sync)
 
 
 class ProtocolService:
@@ -180,7 +180,9 @@ class ProtocolService:
         """Sync wrapper for lock_protocol."""
         if not self._portal:
             raise RuntimeError("ProtocolService must be used as a context manager (with ... as ...)")
-        return self._portal.call(self._async_service.lock_protocol, protocol, context)  # type: ignore[no-any-return]
+        return cast(
+            ProtocolDefinition, self._portal.call(self._async_service.lock_protocol, protocol, context)
+        )
 
     def compile_protocol(
         self, protocol: ProtocolDefinition, target: str, context: UserContext
@@ -188,4 +190,7 @@ class ProtocolService:
         """Sync wrapper for compile_protocol."""
         if not self._portal:
             raise RuntimeError("ProtocolService must be used as a context manager (with ... as ...)")
-        return self._portal.call(self._async_service.compile_protocol, protocol, target, context)  # type: ignore[no-any-return]
+        return cast(
+            List[ExecutableStrategy],
+            self._portal.call(self._async_service.compile_protocol, protocol, target, context),
+        )
