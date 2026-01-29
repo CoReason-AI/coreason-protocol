@@ -136,6 +136,7 @@ def test_lock_protocol_runtime_error(mock_client_cls: MagicMock) -> None:
 
     # Simulate network error or similar
     from httpx import HTTPError
+
     mock_client.post.side_effect = HTTPError("Veritas down")
 
     mock_client_cls.return_value = mock_client
