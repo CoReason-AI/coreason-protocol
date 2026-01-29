@@ -18,6 +18,12 @@ Unlike simple RAG retrieval, this package enforces a scientific workflow:
 3.  **Strict Validation:** Checks structural integrity and PRESS guidelines.
 4.  **Immutable Registration:** Locks and registers approved protocols (via `coreason-veritas`).
 
+## Service Architecture (Service P)
+
+`coreason-protocol` can be deployed as a microservice ("Service P") exposing a FastAPI-based REST API. This service handles the lifecycle of the protocol, from drafting to compilation, while integrating with the Veritas audit system.
+
+For details on API endpoints and usage, see [Usage Guide](docs/usage.md).
+
 ## Installation
 
 ```bash
@@ -30,6 +36,10 @@ Or using poetry:
 poetry add coreason-protocol
 ```
 
+## Dependencies
+
+For a full list of dependencies, see [Requirements](docs/requirements.md).
+
 ## Features
 
 *   **PICO Architecture:** Structuring of research intent into Population, Intervention, Comparator, and Outcome.
@@ -41,40 +51,6 @@ poetry add coreason-protocol
 *   **HITL Governance:** Support for human review with `override_term` and `inject_term` capabilities.
 *   **Audit Fidelity:** Soft-deletion of terms to maintain a complete history of design decisions.
 *   **Multi-Format Rendering:** Export to HTML (visual diff), PRISMA-S text, and JSON-LD.
-
-## Usage
-
-```python
-from coreason_protocol import ProtocolDefinition, PicoBlock, TermOrigin, OntologyTerm
-
-# Initialize a new Protocol Definition
-protocol = ProtocolDefinition(
-    id="prot-123",
-    title="Statins for CVD Prevention",
-    research_question="Do statins reduce CVD risk in elderly patients?",
-    pico_structure={},
-    status="DRAFT"
-)
-
-# Example: Adding a PICO block (programmatically or via AI expansion)
-term = OntologyTerm(
-    id="term-001",
-    label="Statins",
-    vocab_source="MeSH",
-    code="D019821",
-    origin=TermOrigin.USER_INPUT
-)
-
-protocol.pico_structure["I"] = PicoBlock(
-    block_type="I",
-    description="Intervention",
-    terms=[term]
-)
-
-# Render the protocol for review
-html_output = protocol.render(format="html")
-print(html_output)
-```
 
 ## Documentation
 
