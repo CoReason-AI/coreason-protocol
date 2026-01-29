@@ -1,4 +1,5 @@
 import pytest
+from coreason_identity.models import UserContext
 
 from coreason_protocol.compiler import StrategyCompiler
 from coreason_protocol.types import (
@@ -25,9 +26,11 @@ def basic_proto_with_quotes() -> ProtocolDefinition:
     )
 
 
-def test_compile_graph_injection_prevention(basic_proto_with_quotes: ProtocolDefinition) -> None:
+def test_compile_graph_injection_prevention(
+    basic_proto_with_quotes: ProtocolDefinition, test_context: UserContext
+) -> None:
     compiler = StrategyCompiler()
-    strategy = compiler.compile(basic_proto_with_quotes, target="GRAPH")
+    strategy = compiler.compile(basic_proto_with_quotes, context=test_context, target="GRAPH")
 
     qs = strategy.query_string
     # Should contain escaped quote: 'O\'Neil'
@@ -37,7 +40,7 @@ def test_compile_graph_injection_prevention(basic_proto_with_quotes: ProtocolDef
     assert "['O\\'Neil']" in qs
 
 
-def test_compile_graph_backslash_injection() -> None:
+def test_compile_graph_backslash_injection(test_context: UserContext) -> None:
     # Test case for backslash injection
     term = OntologyTerm(
         id="t_bs",
@@ -52,7 +55,7 @@ def test_compile_graph_backslash_injection() -> None:
     )
 
     compiler = StrategyCompiler()
-    strategy = compiler.compile(proto, target="GRAPH")
+    strategy = compiler.compile(proto, context=test_context, target="GRAPH")
     qs = strategy.query_string
 
     # Expected: 'C\\ode' -> 'C\\\\ode' in Cypher string literal
@@ -61,7 +64,7 @@ def test_compile_graph_backslash_injection() -> None:
     assert "['C\\\\ode']" in qs
 
 
-def test_compile_graph_full_pico_structure() -> None:
+def test_compile_graph_full_pico_structure(test_context: UserContext) -> None:
     # Construct full P, I, C, O, S
     terms = [
         OntologyTerm(id=f"t{i}", label=f"L{i}", vocab_source="S", code=f"C{i}", origin=TermOrigin.USER_INPUT)
@@ -79,7 +82,7 @@ def test_compile_graph_full_pico_structure() -> None:
     )
 
     compiler = StrategyCompiler()
-    strategy = compiler.compile(proto, target="GRAPH")
+    strategy = compiler.compile(proto, context=test_context, target="GRAPH")
     qs = strategy.query_string
 
     # Logic:
@@ -105,7 +108,7 @@ def test_compile_graph_full_pico_structure() -> None:
     assert "C4" in parts[4]
 
 
-def test_compile_graph_start_with_later_blocks() -> None:
+def test_compile_graph_start_with_later_blocks(test_context: UserContext) -> None:
     # Only C and O blocks
     terms = [
         OntologyTerm(id=f"t{i}", label=f"L{i}", vocab_source="S", code=f"C{i}", origin=TermOrigin.USER_INPUT)
@@ -120,7 +123,7 @@ def test_compile_graph_start_with_later_blocks() -> None:
     )
 
     compiler = StrategyCompiler()
-    strategy = compiler.compile(proto, target="GRAPH")
+    strategy = compiler.compile(proto, context=test_context, target="GRAPH")
     qs = strategy.query_string
 
     # Should start with MATCH for C (C0), then WITH p MATCH for O (C1)
@@ -131,7 +134,7 @@ def test_compile_graph_start_with_later_blocks() -> None:
     assert qs.count("WITH p") == 1
 
 
-def test_compile_graph_unicode_codes() -> None:
+def test_compile_graph_unicode_codes(test_context: UserContext) -> None:
     term = OntologyTerm(id="t1", label="L", vocab_source="S", code="München", origin=TermOrigin.USER_INPUT)
     pico = {"P": PicoBlock(block_type="P", description="P", terms=[term])}
     proto = ProtocolDefinition(
@@ -139,7 +142,7 @@ def test_compile_graph_unicode_codes() -> None:
     )
 
     compiler = StrategyCompiler()
-    strategy = compiler.compile(proto, target="GRAPH")
+    strategy = compiler.compile(proto, context=test_context, target="GRAPH")
     qs = strategy.query_string
 
     assert "['München']" in qs

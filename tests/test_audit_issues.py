@@ -1,3 +1,5 @@
+from coreason_identity.models import UserContext
+
 from coreason_protocol.types import (
     OntologyTerm,
     PicoBlock,
@@ -7,7 +9,7 @@ from coreason_protocol.types import (
 )
 
 
-def test_compile_idempotency() -> None:
+def test_compile_idempotency(test_context: UserContext) -> None:
     # Setup basic protocol
     p_term = OntologyTerm(
         id="p1",
@@ -33,12 +35,12 @@ def test_compile_idempotency() -> None:
     )
 
     # First compile
-    proto.compile(target="PUBMED")
+    proto.compile(context=test_context, target="PUBMED")
     assert len(proto.execution_strategies) == 1
     assert proto.execution_strategies[0].target == "PUBMED"
 
     # Second compile
-    proto.compile(target="PUBMED")
+    proto.compile(context=test_context, target="PUBMED")
 
     # Audit Expectation: Should still be 1, updated.
     # Current behavior likely appends (so 2), which we want to fix.

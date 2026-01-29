@@ -4,6 +4,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Dict, List, Optional
 
 import pydantic_core
+from coreason_identity.models import UserContext
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 if TYPE_CHECKING:
@@ -294,11 +295,11 @@ class ProtocolDefinition(BaseModel):  # type: ignore[misc]
         # Fallback (should not happen given Enum)
         return label  # pragma: no cover
 
-    def lock(self, user_id: str, veritas_client: "VeritasClient") -> "ProtocolDefinition":
+    def lock(self, context: UserContext, veritas_client: "VeritasClient") -> "ProtocolDefinition":
         """Finalizes the protocol and registers with Veritas.
 
         Args:
-            user_id: The ID of the user approving the protocol.
+            context: User identity context.
             veritas_client: Client for the Veritas audit system.
 
         Returns:
@@ -325,7 +326,9 @@ class ProtocolDefinition(BaseModel):  # type: ignore[misc]
 
         # Create approval record
         self.approval_history = ApprovalRecord(
-            approver_id=user_id, timestamp=datetime.now(timezone.utc), veritas_hash=protocol_hash
+            approver_id=context.user_id,
+            timestamp=datetime.now(timezone.utc),
+            veritas_hash=protocol_hash,
         )
 
         # Update status
@@ -412,12 +415,13 @@ class ProtocolDefinition(BaseModel):  # type: ignore[misc]
 
         self.pico_structure[block_type].terms.append(term)
 
-    def compile(self, target: str = "PUBMED") -> List[ExecutableStrategy]:
+    def compile(self, context: UserContext, target: str = "PUBMED") -> List[ExecutableStrategy]:
         """
         Compiles the protocol into executable search strategies.
         This is a convenience wrapper around StrategyCompiler.
 
         Args:
+            context: User identity context.
             target: The target execution engine (default: "PUBMED").
 
         Returns:
@@ -426,7 +430,7 @@ class ProtocolDefinition(BaseModel):  # type: ignore[misc]
         from coreason_protocol.compiler import StrategyCompiler
 
         compiler = StrategyCompiler()
-        strategy = compiler.compile(self, target=target)
+        strategy = compiler.compile(self, context=context, target=target)
 
         # Idempotency: Update existing strategy for the target if present
         updated = False
