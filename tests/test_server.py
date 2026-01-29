@@ -21,9 +21,7 @@ def test_health() -> None:
 
 def test_draft_protocol() -> None:
     with TestClient(app) as client:
-        response = client.post(
-            "/protocol/draft", json={"question": "Does aspirin prevent cancer?"}
-        )
+        response = client.post("/protocol/draft", json={"question": "Does aspirin prevent cancer?"})
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "DRAFT"
@@ -98,9 +96,7 @@ def test_lock_protocol(mock_client_cls: MagicMock) -> None:
             },
         }
 
-        response = client.post(
-            "/protocol/lock", json={"protocol": protocol, "user_id": "user123"}
-        )
+        response = client.post("/protocol/lock", json={"protocol": protocol, "user_id": "user123"})
 
         if response.status_code != 200:
             print(f"Lock failed: {response.json()}")

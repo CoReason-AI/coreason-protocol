@@ -24,13 +24,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 app = FastAPI(lifespan=lifespan)
 
 
-@app.get("/health")
+@app.get("/health")  # type: ignore[misc]
 async def health() -> dict[str, str]:
     """Health check endpoint."""
     return {"status": "healthy", "version": "0.1.0", "role": "design_plane"}
 
 
-@app.post("/protocol/draft")
+@app.post("/protocol/draft")  # type: ignore[misc]
 async def draft_protocol(
     question: Annotated[str, Body(embed=True)],
 ) -> ProtocolDefinition:
@@ -49,7 +49,7 @@ async def draft_protocol(
     return protocol
 
 
-@app.post("/protocol/lock")
+@app.post("/protocol/lock")  # type: ignore[misc]
 async def lock_protocol(
     request: Request,
     protocol: Annotated[ProtocolDefinition, Body(...)],
@@ -78,7 +78,7 @@ async def lock_protocol(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@app.post("/protocol/compile")
+@app.post("/protocol/compile")  # type: ignore[misc]
 async def compile_protocol(
     request: Request,
     protocol: Annotated[ProtocolDefinition, Body(...)],
