@@ -304,3 +304,15 @@ def test_service_sync_compile(protocol_definition: ProtocolDefinition, mock_cont
 
     assert len(strategies) == 1
     assert strategies[0].target == "PUBMED"
+
+
+@pytest.mark.asyncio  # type: ignore[misc]
+async def test_service_async_context_none(protocol_definition: ProtocolDefinition) -> None:
+    svc = ProtocolServiceAsync()
+    # Cast None to UserContext for type checking simulation of invalid input
+    with pytest.raises(ValueError, match="context cannot be None"):
+        await svc.lock_protocol(protocol_definition, None)
+
+    with pytest.raises(ValueError, match="context cannot be None"):
+        await svc.compile_protocol(protocol_definition, "PUBMED", None)
+    await svc.__aexit__(None, None, None)

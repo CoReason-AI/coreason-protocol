@@ -72,3 +72,36 @@ def test_run_command(protocol_file, capsys):  # type: ignore[no-untyped-def]
         captured = capsys.readouterr()
         # "Execution logic not implemented yet."
         assert "Execution logic" in captured.out
+
+
+def test_load_protocol_failure(capsys):  # type: ignore[no-untyped-def]
+    with patch("sys.argv", ["main.py", "compile", "non_existent.json"]):
+        with pytest.raises(SystemExit):
+            main()
+    _ = capsys.readouterr()
+    # Should log error but not print to stdout in a way we check here, main exits 1
+    # logger output is handled by loguru, maybe check caplog if needed, but SystemExit 1 is good enough signal
+
+
+def test_compile_exception(protocol_file):  # type: ignore[no-untyped-def]
+    with patch("sys.argv", ["main.py", "compile", protocol_file]):
+        with patch("coreason_protocol.main.ProtocolService") as mock_service:
+            mock_instance = mock_service.return_value.__enter__.return_value
+            mock_instance.compile_protocol.side_effect = Exception("Compile Error")
+            with pytest.raises(SystemExit):
+                main()
+
+
+def test_validate_exception(protocol_file):  # type: ignore[no-untyped-def]
+    with patch("sys.argv", ["main.py", "validate", protocol_file]):
+        with patch("coreason_protocol.main.ProtocolValidator") as mock_validator:
+            mock_validator.validate.side_effect = Exception("Validation Error")
+            with pytest.raises(SystemExit):
+                main()
+
+
+def test_no_command(capsys):  # type: ignore[no-untyped-def]
+    with patch("sys.argv", ["main.py"]):
+        main()
+    captured = capsys.readouterr()
+    assert "coreason-protocol v0.2.0" in captured.out
