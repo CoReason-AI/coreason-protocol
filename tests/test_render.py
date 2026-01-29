@@ -9,7 +9,7 @@ from coreason_protocol.types import (
 )
 
 
-@pytest.fixture  # type: ignore[misc]
+@pytest.fixture
 def sample_protocol() -> ProtocolDefinition:
     """Fixture for a populated ProtocolDefinition."""
     return ProtocolDefinition(

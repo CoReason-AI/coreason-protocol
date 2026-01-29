@@ -13,7 +13,7 @@ from coreason_protocol.types import (
 )
 
 
-@pytest.fixture  # type: ignore[misc]
+@pytest.fixture
 def complex_protocol() -> ProtocolDefinition:
     p_term = OntologyTerm(id="p1", label="Patient", vocab_source="MeSH", code="D000", origin=TermOrigin.USER_INPUT)
     i_term = OntologyTerm(

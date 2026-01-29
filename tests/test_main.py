@@ -9,16 +9,19 @@
 # Source Code: https://github.com/CoReason-AI/coreason_protocol
 
 import json
+from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
 
+from coreason_protocol import __version__
 from coreason_protocol.main import main
 
 
-@pytest.fixture  # type: ignore[misc]
-def protocol_file(tmp_path: object) -> str:
-    p = tmp_path / "protocol.json"  # type: ignore
+@pytest.fixture
+def protocol_file(tmp_path: Path) -> str:
+    p = tmp_path / "protocol.json"
     data = {
         "id": "proto-1",
         "title": "Test Protocol",
@@ -34,16 +37,16 @@ def protocol_file(tmp_path: object) -> str:
     return str(p)
 
 
-def test_main_help(capsys):  # type: ignore[no-untyped-def]
+def test_main_help(capsys: Any) -> None:
     with patch("sys.argv", ["main.py", "--help"]):
         with pytest.raises(SystemExit):
             main()
     captured = capsys.readouterr()
-    assert "coreason-protocol v0.2.0" in captured.out
+    assert f"coreason-protocol v{__version__}" in captured.out
     assert "usage:" in captured.out
 
 
-def test_compile_command(protocol_file, capsys):  # type: ignore[no-untyped-def]
+def test_compile_command(protocol_file: str, capsys: Any) -> None:
     with patch("sys.argv", ["main.py", "compile", protocol_file]):
         # Mock Service to avoid real execution logic dependencies or I/O
         with patch("coreason_protocol.main.ProtocolService") as mock_protocol_service:
@@ -59,14 +62,14 @@ def test_compile_command(protocol_file, capsys):  # type: ignore[no-untyped-def]
             assert "Query: QUERY" in captured.out
 
 
-def test_validate_command(protocol_file):  # type: ignore[no-untyped-def]
+def test_validate_command(protocol_file: str) -> None:
     with patch("sys.argv", ["main.py", "validate", protocol_file]):
         with patch("coreason_protocol.main.ProtocolValidator") as mock_validator:
             main()
             mock_validator.validate.assert_called()
 
 
-def test_run_command(protocol_file, capsys):  # type: ignore[no-untyped-def]
+def test_run_command(protocol_file: str, capsys: Any) -> None:
     with patch("sys.argv", ["main.py", "run", protocol_file]):
         main()
         captured = capsys.readouterr()
@@ -74,7 +77,7 @@ def test_run_command(protocol_file, capsys):  # type: ignore[no-untyped-def]
         assert "Execution logic" in captured.out
 
 
-def test_load_protocol_failure(capsys):  # type: ignore[no-untyped-def]
+def test_load_protocol_failure(capsys: Any) -> None:
     with patch("sys.argv", ["main.py", "compile", "non_existent.json"]):
         with pytest.raises(SystemExit):
             main()
@@ -82,7 +85,7 @@ def test_load_protocol_failure(capsys):  # type: ignore[no-untyped-def]
     # Implicitly covers exception branch in load_protocol -> None -> compile_command exit
 
 
-def test_validate_command_load_failure(capsys):  # type: ignore[no-untyped-def]
+def test_validate_command_load_failure(capsys: Any) -> None:
     """Covers line 76: if not protocol check in validate_command."""
     with patch("sys.argv", ["main.py", "validate", "non_existent.json"]):
         with pytest.raises(SystemExit):
@@ -90,7 +93,7 @@ def test_validate_command_load_failure(capsys):  # type: ignore[no-untyped-def]
     # load_protocol returns None, validate_command checks if not protocol -> sys.exit(1)
 
 
-def test_load_protocol_invalid_type(protocol_file):  # type: ignore[no-untyped-def]
+def test_load_protocol_invalid_type(protocol_file: str) -> None:
     """Covers the case where model_validate returns unexpected type."""
     with patch("sys.argv", ["main.py", "compile", protocol_file]):
         with patch("coreason_protocol.types.ProtocolDefinition.model_validate") as mock_validate:
@@ -102,7 +105,7 @@ def test_load_protocol_invalid_type(protocol_file):  # type: ignore[no-untyped-d
                 main()
 
 
-def test_compile_exception(protocol_file):  # type: ignore[no-untyped-def]
+def test_compile_exception(protocol_file: str) -> None:
     with patch("sys.argv", ["main.py", "compile", protocol_file]):
         with patch("coreason_protocol.main.ProtocolService") as mock_service:
             mock_instance = mock_service.return_value.__enter__.return_value
@@ -111,7 +114,7 @@ def test_compile_exception(protocol_file):  # type: ignore[no-untyped-def]
                 main()
 
 
-def test_validate_exception(protocol_file):  # type: ignore[no-untyped-def]
+def test_validate_exception(protocol_file: str) -> None:
     with patch("sys.argv", ["main.py", "validate", protocol_file]):
         with patch("coreason_protocol.main.ProtocolValidator") as mock_validator:
             mock_validator.validate.side_effect = Exception("Validation Error")
@@ -119,8 +122,8 @@ def test_validate_exception(protocol_file):  # type: ignore[no-untyped-def]
                 main()
 
 
-def test_no_command(capsys):  # type: ignore[no-untyped-def]
+def test_no_command(capsys: Any) -> None:
     with patch("sys.argv", ["main.py"]):
         main()
     captured = capsys.readouterr()
-    assert "coreason-protocol v0.2.0" in captured.out
+    assert f"coreason-protocol v{__version__}" in captured.out

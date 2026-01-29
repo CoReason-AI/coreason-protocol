@@ -24,7 +24,7 @@ from coreason_protocol.types import (
 )
 
 
-@pytest.fixture  # type: ignore[misc]
+@pytest.fixture
 def complex_protocol() -> ProtocolDefinition:
     """Creates a complex protocol with multiple blocks and terms."""
     term_p1 = OntologyTerm(
