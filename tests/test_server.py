@@ -1,27 +1,38 @@
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
+
 from fastapi.testclient import TestClient
+
 from coreason_protocol.server import app
 
 # We need to patch httpx.AsyncClient used in ProtocolServiceAsync
 # ProtocolServiceAsync is initialized in server.lifespan
 
-def test_health():
+
+def test_health() -> None:
     with TestClient(app) as client:
         response = client.get("/health")
         assert response.status_code == 200
-        assert response.json() == {"status": "healthy", "version": "0.1.0", "role": "design_plane"}
+        assert response.json() == {
+            "status": "healthy",
+            "version": "0.1.0",
+            "role": "design_plane",
+        }
 
-def test_draft_protocol():
+
+def test_draft_protocol() -> None:
     with TestClient(app) as client:
-        response = client.post("/protocol/draft", json={"question": "Does aspirin prevent cancer?"})
+        response = client.post(
+            "/protocol/draft", json={"question": "Does aspirin prevent cancer?"}
+        )
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "DRAFT"
         assert data["research_question"] == "Does aspirin prevent cancer?"
         assert "id" in data
 
+
 @patch("coreason_protocol.service.httpx.AsyncClient")
-def test_lock_protocol(mock_client_cls):
+def test_lock_protocol(mock_client_cls: MagicMock) -> None:
     # Setup mock client instance
     mock_client = AsyncMock()
     # Mock the post return value
@@ -43,12 +54,53 @@ def test_lock_protocol(mock_client_cls):
 
         # Populate mandatory blocks for validation
         protocol["pico_structure"] = {
-            "P": {"block_type": "P", "description": "Population", "terms": [{"id": "11111111-1111-1111-1111-111111111111", "label": "Adults", "vocab_source": "MeSH", "code": "D000328", "origin": "USER_INPUT", "is_active": True}]},
-            "I": {"block_type": "I", "description": "Intervention", "terms": [{"id": "22222222-2222-2222-2222-222222222222", "label": "Aspirin", "vocab_source": "MeSH", "code": "D001241", "origin": "USER_INPUT", "is_active": True}]},
-            "O": {"block_type": "O", "description": "Outcome", "terms": [{"id": "33333333-3333-3333-3333-333333333333", "label": "Survival", "vocab_source": "MeSH", "code": "D015996", "origin": "USER_INPUT", "is_active": True}]},
+            "P": {
+                "block_type": "P",
+                "description": "Population",
+                "terms": [
+                    {
+                        "id": "11111111-1111-1111-1111-111111111111",
+                        "label": "Adults",
+                        "vocab_source": "MeSH",
+                        "code": "D000328",
+                        "origin": "USER_INPUT",
+                        "is_active": True,
+                    }
+                ],
+            },
+            "I": {
+                "block_type": "I",
+                "description": "Intervention",
+                "terms": [
+                    {
+                        "id": "22222222-2222-2222-2222-222222222222",
+                        "label": "Aspirin",
+                        "vocab_source": "MeSH",
+                        "code": "D001241",
+                        "origin": "USER_INPUT",
+                        "is_active": True,
+                    }
+                ],
+            },
+            "O": {
+                "block_type": "O",
+                "description": "Outcome",
+                "terms": [
+                    {
+                        "id": "33333333-3333-3333-3333-333333333333",
+                        "label": "Survival",
+                        "vocab_source": "MeSH",
+                        "code": "D015996",
+                        "origin": "USER_INPUT",
+                        "is_active": True,
+                    }
+                ],
+            },
         }
 
-        response = client.post("/protocol/lock", json={"protocol": protocol, "user_id": "user123"})
+        response = client.post(
+            "/protocol/lock", json={"protocol": protocol, "user_id": "user123"}
+        )
 
         if response.status_code != 200:
             print(f"Lock failed: {response.json()}")
@@ -58,7 +110,8 @@ def test_lock_protocol(mock_client_cls):
         assert data["status"] == "APPROVED"
         assert data["approval_history"]["veritas_hash"] == "veritas-hash-123"
 
-def test_compile_protocol():
+
+def test_compile_protocol() -> None:
     with TestClient(app) as client:
         # Create a draft
         draft_resp = client.post("/protocol/draft", json={"question": "test"})
@@ -66,12 +119,58 @@ def test_compile_protocol():
 
         # Populate mandatory blocks to ensure meaningful compilation
         protocol["pico_structure"] = {
-            "P": {"block_type": "P", "description": "Population", "terms": [{"id": "11111111-1111-1111-1111-111111111111", "label": "Adults", "vocab_source": "MeSH", "code": "D000328", "origin": "USER_INPUT", "is_active": True}]},
-            "I": {"block_type": "I", "description": "Intervention", "terms": [{"id": "22222222-2222-2222-2222-222222222222", "label": "Aspirin", "vocab_source": "MeSH", "code": "D001241", "origin": "USER_INPUT", "is_active": True}]},
-            "O": {"block_type": "O", "description": "Outcome", "terms": [{"id": "33333333-3333-3333-3333-333333333333", "label": "Survival", "vocab_source": "MeSH", "code": "D015996", "origin": "USER_INPUT", "is_active": True}]},
+            "P": {
+                "block_type": "P",
+                "description": "Population",
+                "terms": [
+                    {
+                        "id": "11111111-1111-1111-1111-111111111111",
+                        "label": "Adults",
+                        "vocab_source": "MeSH",
+                        "code": "D000328",
+                        "origin": "USER_INPUT",
+                        "is_active": True,
+                    }
+                ],
+            },
+            "I": {
+                "block_type": "I",
+                "description": "Intervention",
+                "terms": [
+                    {
+                        "id": "22222222-2222-2222-2222-222222222222",
+                        "label": "Aspirin",
+                        "vocab_source": "MeSH",
+                        "code": "D001241",
+                        "origin": "USER_INPUT",
+                        "is_active": True,
+                    }
+                ],
+            },
+            "O": {
+                "block_type": "O",
+                "description": "Outcome",
+                "terms": [
+                    {
+                        "id": "33333333-3333-3333-3333-333333333333",
+                        "label": "Survival",
+                        "vocab_source": "MeSH",
+                        "code": "D015996",
+                        "origin": "USER_INPUT",
+                        "is_active": True,
+                    }
+                ],
+            },
         }
 
-        response = client.post("/protocol/compile", json={"protocol": protocol, "target": "PUBMED", "user_id": "user123"})
+        response = client.post(
+            "/protocol/compile",
+            json={
+                "protocol": protocol,
+                "target": "PUBMED",
+                "user_id": "user123",
+            },
+        )
 
         if response.status_code != 200:
             print(f"Compile failed: {response.json()}")
