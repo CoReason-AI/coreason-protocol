@@ -17,7 +17,7 @@ integrates with ontologies, and manages the lifecycle of a protocol from draft
 to immutable registration.
 """
 
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 __author__ = "Gowtham A Rao"
 __email__ = "gowtham.rao@coreason.ai"
 
