@@ -79,8 +79,15 @@ def test_load_protocol_failure(capsys):  # type: ignore[no-untyped-def]
         with pytest.raises(SystemExit):
             main()
     _ = capsys.readouterr()
-    # Should log error but not print to stdout in a way we check here, main exits 1
-    # logger output is handled by loguru, maybe check caplog if needed, but SystemExit 1 is good enough signal
+    # Implicitly covers exception branch in load_protocol -> None -> compile_command exit
+
+
+def test_validate_command_load_failure(capsys):  # type: ignore[no-untyped-def]
+    """Covers line 76: if not protocol check in validate_command."""
+    with patch("sys.argv", ["main.py", "validate", "non_existent.json"]):
+        with pytest.raises(SystemExit):
+            main()
+    # load_protocol returns None, validate_command checks if not protocol -> sys.exit(1)
 
 
 def test_compile_exception(protocol_file):  # type: ignore[no-untyped-def]
