@@ -11,7 +11,7 @@ from coreason_protocol.types import (
 )
 
 
-@pytest.fixture  # type: ignore[misc]
+@pytest.fixture
 def mock_context() -> UserContext:
     return UserContext(
         user_id="test-user",
@@ -22,7 +22,7 @@ def mock_context() -> UserContext:
     )
 
 
-@pytest.fixture  # type: ignore[misc]
+@pytest.fixture
 def basic_protocol() -> ProtocolDefinition:
     p_term1 = OntologyTerm(
         id="p1",

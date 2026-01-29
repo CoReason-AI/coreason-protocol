@@ -141,7 +141,7 @@ def test_large_number_of_terms() -> None:
 def test_term_origin_enum_enforcement() -> None:
     """Ensure invalid TermOrigin values are rejected."""
     with pytest.raises(ValidationError):
-        OntologyTerm(id="123", label="Bad Origin", vocab_source="MeSH", code="D123", origin="INVALID_ORIGIN")
+        OntologyTerm(id="123", label="Bad Origin", vocab_source="MeSH", code="D123", origin="INVALID_ORIGIN")  # type: ignore[arg-type]
 
 
 def test_execution_strategies_default() -> None:

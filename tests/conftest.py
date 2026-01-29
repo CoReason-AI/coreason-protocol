@@ -2,7 +2,7 @@ import pytest
 from coreason_identity.models import UserContext
 
 
-@pytest.fixture  # type: ignore[misc]
+@pytest.fixture
 def test_context() -> UserContext:
     return UserContext(
         user_id="test-user",

@@ -11,7 +11,7 @@ from coreason_protocol.types import (
 )
 
 
-@pytest.fixture  # type: ignore[misc]
+@pytest.fixture
 def empty_protocol() -> ProtocolDefinition:
     return ProtocolDefinition(
         id="proto-edge",

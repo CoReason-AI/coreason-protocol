@@ -11,7 +11,7 @@ from coreason_protocol.types import (
 from coreason_protocol.validator import ProtocolValidator
 
 
-@pytest.fixture  # type: ignore[misc]
+@pytest.fixture
 def base_term() -> OntologyTerm:
     return OntologyTerm(
         id="term-1",
@@ -22,7 +22,7 @@ def base_term() -> OntologyTerm:
     )
 
 
-@pytest.fixture  # type: ignore[misc]
+@pytest.fixture
 def valid_pico_structure(base_term: OntologyTerm) -> Dict[str, PicoBlock]:
     return {
         "P": PicoBlock(block_type="P", description="Pop", terms=[base_term]),
@@ -31,7 +31,7 @@ def valid_pico_structure(base_term: OntologyTerm) -> Dict[str, PicoBlock]:
     }
 
 
-@pytest.fixture  # type: ignore[misc]
+@pytest.fixture
 def protocol_definition(valid_pico_structure: Dict[str, PicoBlock]) -> ProtocolDefinition:
     return ProtocolDefinition(
         id="proto-1",

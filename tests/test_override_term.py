@@ -20,7 +20,7 @@ from coreason_protocol.types import (
 
 
 # Fixture for a standard valid term
-@pytest.fixture  # type: ignore[misc]
+@pytest.fixture
 def standard_term() -> OntologyTerm:
     return OntologyTerm(
         id="term-123",
@@ -32,7 +32,7 @@ def standard_term() -> OntologyTerm:
 
 
 # Fixture for a standard draft protocol
-@pytest.fixture  # type: ignore[misc]
+@pytest.fixture
 def draft_protocol(standard_term: OntologyTerm) -> ProtocolDefinition:
     block = PicoBlock(block_type="P", description="Patients", terms=[standard_term], logic_operator="OR")
     return ProtocolDefinition(

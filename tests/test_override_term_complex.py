@@ -31,7 +31,7 @@ def create_term(term_id: str, label: str) -> OntologyTerm:
     )
 
 
-@pytest.fixture  # type: ignore[misc]
+@pytest.fixture
 def complex_protocol() -> ProtocolDefinition:
     """
     Creates a fully populated PICO protocol with multiple blocks and terms.
