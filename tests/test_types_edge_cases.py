@@ -50,7 +50,7 @@ def test_enum_case_sensitivity() -> None:
             label="Term",
             vocab_source="Src",
             code="C1",
-            origin="user_input",
+            origin="user_input",  # type: ignore[arg-type]
         )
 
 

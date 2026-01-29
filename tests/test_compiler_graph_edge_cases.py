@@ -11,7 +11,7 @@ from coreason_protocol.types import (
 )
 
 
-@pytest.fixture  # type: ignore[misc]
+@pytest.fixture
 def basic_proto_with_quotes() -> ProtocolDefinition:
     term = OntologyTerm(
         id="t1",

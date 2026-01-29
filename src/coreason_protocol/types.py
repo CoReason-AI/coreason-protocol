@@ -52,7 +52,7 @@ class VocabSource(str, Enum):
     MESH = "MeSH"
 
 
-class OntologyTerm(BaseModel):  # type: ignore[misc]
+class OntologyTerm(BaseModel):
     """
     Represents a single term from a controlled vocabulary.
 
@@ -76,7 +76,7 @@ class OntologyTerm(BaseModel):  # type: ignore[misc]
 
     model_config = ConfigDict(validate_assignment=True)
 
-    @field_validator("label")  # type: ignore[misc]
+    @field_validator("label")
     @classmethod
     def check_non_empty(cls, v: str) -> str:
         if not v or not v.strip():
@@ -84,7 +84,7 @@ class OntologyTerm(BaseModel):  # type: ignore[misc]
         return v
 
 
-class PicoBlock(BaseModel):  # type: ignore[misc]
+class PicoBlock(BaseModel):
     """
     Represents a PICO block (Population, Intervention, Comparator, Outcome, Study Design).
 
@@ -102,14 +102,14 @@ class PicoBlock(BaseModel):  # type: ignore[misc]
 
     model_config = ConfigDict(validate_assignment=True)
 
-    @field_validator("block_type")  # type: ignore[misc]
+    @field_validator("block_type")
     @classmethod
     def validate_block_type(cls, v: str) -> str:
         if v not in ("P", "I", "C", "O", "S"):
             raise ValueError("block_type must be one of P, I, C, O, S")
         return v
 
-    @field_validator("logic_operator")  # type: ignore[misc]
+    @field_validator("logic_operator")
     @classmethod
     def validate_logic_operator(cls, v: str) -> str:
         if v not in ("AND", "OR", "NOT"):
@@ -134,7 +134,7 @@ class ProtocolStatus(str, Enum):
     EXECUTED = "EXECUTED"
 
 
-class ExecutableStrategy(BaseModel):  # type: ignore[misc]
+class ExecutableStrategy(BaseModel):
     """
     A compiled search strategy for a specific target.
 
@@ -149,7 +149,7 @@ class ExecutableStrategy(BaseModel):  # type: ignore[misc]
     validation_status: str
 
 
-class ApprovalRecord(BaseModel):  # type: ignore[misc]
+class ApprovalRecord(BaseModel):
     """
     Record of a human sign-off event.
 
@@ -163,7 +163,7 @@ class ApprovalRecord(BaseModel):  # type: ignore[misc]
     timestamp: datetime
     veritas_hash: str
 
-    @field_validator("veritas_hash")  # type: ignore[misc]
+    @field_validator("veritas_hash")
     @classmethod
     def validate_hash(cls, v: str) -> str:
         if not v or not v.strip():
@@ -171,7 +171,7 @@ class ApprovalRecord(BaseModel):  # type: ignore[misc]
         return v
 
 
-class ProtocolDefinition(BaseModel):  # type: ignore[misc]
+class ProtocolDefinition(BaseModel):
     """
     The master definition of a search protocol.
     Acts as the "Design Plane" state machine.
@@ -202,7 +202,7 @@ class ProtocolDefinition(BaseModel):  # type: ignore[misc]
 
     model_config = ConfigDict(validate_assignment=True)
 
-    @field_validator("pico_structure")  # type: ignore[misc]
+    @field_validator("pico_structure")
     @classmethod
     def validate_pico_structure(cls, v: Dict[str, PicoBlock]) -> Dict[str, PicoBlock]:
         for key, block in v.items():
