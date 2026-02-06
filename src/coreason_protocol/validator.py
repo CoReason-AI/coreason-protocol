@@ -54,3 +54,16 @@ class ProtocolValidator:
                         raise ValueError(f"Active term in block '{block_key}' has empty label (ID: {term.id})")
                     if not term.code or not term.code.strip():
                         raise ValueError(f"Active term in block '{block_key}' has empty code (ID: {term.id})")
+
+                    # --- NEW: Atomic Integrity Check ---
+                    # Reject terms that contain logic or delimiters, which confuse PubMed.
+                    # We look for surrounding spaces on keywords to avoid false positives (e.g. "Standard").
+                    # Semicolons and Commas are checked without spaces.
+                    forbidden_patterns = [" AND ", " OR ", "NOT ", ";", ","]
+
+                    for bad_str in forbidden_patterns:
+                        if bad_str in term.label:
+                            raise ValueError(
+                                f"Invalid atomic term in block '{block_key}': '{term.label}' contains '{bad_str}'. "
+                                "This must be split into separate OntologyTerms to generate valid PubMed syntax."
+                            )
