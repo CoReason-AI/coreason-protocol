@@ -1,4 +1,5 @@
 import html
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
 from typing import TYPE_CHECKING, Dict, List, Optional
@@ -444,3 +445,11 @@ class ProtocolDefinition(BaseModel):
             self.execution_strategies.append(strategy)
 
         return [strategy]
+
+
+@dataclass
+class ProtocolRequest:
+    id: str
+    title: str
+    research_question: str
+    pico_structure: Dict[str, PicoBlock]
